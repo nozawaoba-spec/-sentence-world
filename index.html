@@ -161,7 +161,7 @@ q{quotes:"「" "」";font-weight:800}
 .chapters button{background:transparent;border:0;cursor:pointer;padding:2px;color:var(--hai)}
 .chapters button.done{color:var(--kami)}
 .chapters button:disabled{color:var(--usu);cursor:default}
-.overlay{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--yami) 97%,transparent);z-index:40;
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:color-mix(in srgb,var(--yami) 97%,transparent);z-index:40;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
 
 /* overworld viewport */
@@ -420,6 +420,9 @@ button{touch-action:manipulation}
 .bmenu{display:none}
 .mgrid{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;width:min(320px,100%)}
 .mgrid .go{padding:12px 6px;font-size:15px;letter-spacing:.1em}
+.overlay>.screen{margin:auto;padding-block:max(44px,4vh) 24px;max-width:560px;width:100%}
+.ovx{position:fixed;top:max(8px,env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));z-index:41;width:40px;height:40px;border:1px solid var(--usu);background:color-mix(in srgb,var(--yami) 92%,transparent);color:var(--kami);font-size:20px;line-height:1;cursor:pointer;border-radius:4px}
+.overlay .shop{max-height:none}
 /* スマホ：一画面に収める */
 @media (pointer:coarse),(max-height:820px){
   body{padding-block:8px}
@@ -3219,14 +3222,16 @@ function winBattle(){
   if(S.flags.raid==="on"&&!(S.flags.raidLeft>0)&&S.cur==="world"&&!S.flags.raidBoss){const go=()=>{if(DLG||TIPQ.length){setTimeout(go,300);return;}raidBoss();};setTimeout(go,400);}
 }
 function loseBattle(){
-  const d=overlay(`<p class="lead" style="color:var(--shu)">我　は　倒れた</p><p>だが、字の世界は書きなおせる。</p>
+  const d=overlay(`<p class="lead" style="color:var(--shu)" data-nox>我　は　倒れた</p><p>だが、字の世界は書きなおせる。</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button class="go" id="u">戦いの前へ</button><button class="go sub" id="rs">入口から</button></div>`);
   d.querySelector("#u").onclick=()=>{B=null;closeOverlay();restore(S.hist.pop());buildWorld();};
   d.querySelector("#rs").onclick=()=>{B=null;closeOverlay();restore(S.entry);buildWorld();};
 }
 
 /* ================= 画面 ================= */
-function overlay(html){const pb=document.querySelector("#ov .bagbox"),pst=pb?pb.scrollTop:0;closeOverlay();const d=document.createElement("div");d.className="overlay";d.id="ov";d.innerHTML=`<div class="screen">${html}</div>`;document.body.appendChild(d);const b=d.querySelector("button");if(b)try{b.focus({preventScroll:true});}catch(e){}const nb=d.querySelector(".bagbox");if(nb&&pst)nb.scrollTop=pst;return d;}
+function overlay(html){const pb=document.querySelector("#ov .bagbox"),pst=pb?pb.scrollTop:0;closeOverlay();const d=document.createElement("div");d.className="overlay";d.id="ov";d.innerHTML=`<div class="screen">${html}</div>${/data-nox/.test(html)?"":'<button class="ovx" aria-label="閉じる">×</button>'}`;document.body.appendChild(d);const b=d.querySelector("button");if(b)try{b.focus({preventScroll:true});}catch(e){}const nb=d.querySelector(".bagbox");if(nb&&pst)nb.scrollTop=pst;
+  const x=d.querySelector(".ovx");if(x)x.onclick=()=>{closeOverlay();if(S&&!B&&$("#board")){saveGame();renderWorld();}};
+  return d;}
 function closeOverlay(){const o=$("#ov");if(o)o.remove();}
 function confirmRestart(){
   if(lock||B)return;
