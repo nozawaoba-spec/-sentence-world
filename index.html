@@ -2123,28 +2123,48 @@ function sellPrice(ch){
   if(RECIPES.some(r=>r[2]===ch))return 2;
   return 1;
 }
+let SELL_TAB="all",SELL_ARM=null;
+function sellInfo(ch){return isWeapon(ch)?"武器："+weaponDesc(ch):ITEM_INFO[ch]||(isCmp(ch)?"創作文字。珍しがられる":ch==="薬"?"心を三つ戻す":RECIPES.some(r=>r[2]===ch)?"合わせてできた字":"ありふれた字");}
 function openShop(){
   const tabs=`<div class="shoptabs"><button id="tbuy" class="${SHOP_TAB==="buy"?"on":""}">買う</button><button id="tsell" class="${SHOP_TAB==="sell"?"on":""}">売る</button></div>`;
-  let list;
+  let list,sub="";
   if(SHOP_TAB==="buy"){
-    list=SHOP.map(([ch,p,t],i)=>`<button class="ware" data-buy="${i}" ${hero.zeni<p?"disabled":""}><b>${ch}</b><span>${t}</span><em>${p}銭</em></button>`).join("");
+    list=SHOP.map(([ch,p,t],i)=>`<div class="bagrow"><b>${ch}</b><span>${t}</span><button data-buy="${i}" ${hero.zeni<p?"disabled":""}>${p}銭</button></div>`).join("");
   }else{
-    const items=[...hero.bag.map((ch,i)=>({ch,i,from:"bag"})),...(S.hand?[{ch:S.hand,i:-1,from:"hand"}]:[])];
-    list=items.length?items.map((x,k)=>{const p=sellPrice(x.ch);return`<button class="ware" data-sell="${k}" ${p?"":"disabled"}><b>${glyph(x.ch)}</b><span>${p?(isWeapon(x.ch)?"武器："+weaponDesc(x.ch):ITEM_INFO[x.ch]||(isCmp(x.ch)?"創作文字。珍しがられる":x.ch==="薬"?"心を三つ戻す":RECIPES.some(r=>r[2]===x.ch)?"合わせてできた字":"ありふれた字")):"光の字は売れない"}${x.from==="hand"?"（手に持っている）":""}</span><em>${p?p+"銭":"—"}</em></button>`;}).join(""):'<p class="sub-note">売れる字を持っていない。</p>';
-    SHOP._items=items;
+    const stacks=new Map();
+    hero.bag.forEach(ch=>{if(!sellPrice(ch))return;if(!stacks.has(ch))stacks.set(ch,{ch,n:0,hand:false});stacks.get(ch).n++;});
+    if(S.hand&&sellPrice(S.hand)){if(!stacks.has(S.hand))stacks.set(S.hand,{ch:S.hand,n:0,hand:true});stacks.get(S.hand).n++;stacks.get(S.hand).hand=true;}
+    const groups=BAG_GROUPS.filter(g=>g.k!=="light").map(g=>({...g,items:[]}));
+    for(const st of stacks.values()){const g=groups.find(g=>g.f(st.ch));if(g)g.items.push(st);}
+    const shown=groups.filter(g=>g.items.length);
+    if(SELL_TAB!=="all"&&!shown.some(g=>g.k===SELL_TAB))SELL_TAB="all";
+    const total=[...stacks.values()].reduce((a,x)=>a+sellPrice(x.ch)*x.n,0);
+    sub=`<div class="bagtabs"><button data-stab="all" class="${SELL_TAB==="all"?"on":""}">全部</button>${shown.map(g=>`<button data-stab="${g.k}" class="${SELL_TAB===g.k?"on":""}">${g.t.replace("の文に書く字","へ書く")}<small>${g.items.reduce((a,x)=>a+x.n,0)}</small></button>`).join("")}</div>`;
+    const vis=shown.filter(g=>SELL_TAB==="all"||g.k===SELL_TAB);
+    list=vis.length?vis.map(g=>{const gsum=g.items.reduce((a,x)=>a+sellPrice(x.ch)*x.n,0);
+      return`<p class="bagh">${g.t}<small>まとめて売ると 銭${gsum}</small></p>`+g.items.map(x=>{const p=sellPrice(x.ch);
+        return`<div class="bagrow"><b>${glyph(x.ch)}</b><span><em>${x.n>1?"×"+x.n:""}${x.hand?"（手）":""}</em>${sellInfo(x.ch)}<br><small>一つ ${p}銭</small></span><span class="eqbtns"><button data-sell1="${encodeURIComponent(x.ch)}">一つ</button>${x.n>1?`<button data-sellall="${encodeURIComponent(x.ch)}">全部 ${p*x.n}</button>`:""}</span></div>`;}).join("")
+        +(SELL_TAB===g.k?`<button class="go sub small" data-sellgrp="${g.k}">${SELL_ARM===g.k?`もう一度押すと、${g.t}を全部売る（銭${gsum}）`:`${g.t}を まとめて売る（銭${gsum}）`}</button>`:"");}).join("")
+      :'<p class="sub-note">売れる字を持っていない。（光の字は売れない）</p>';
+    sub+=`<p class="sub-note">売れる字 全部で 銭${total}ぶん</p>`;
   }
-  const d=overlay(`<p class="lead">よろず屋</p>${tabs}<p>手持ち　銭${hero.zeni}枚${hero.arrows?`　矢${hero.arrows}本`:""}</p>
-    <div class="shop">${list}</div>
+  const d=overlay(`<p class="lead">よろず屋</p>${tabs}<p class="sub-note">手持ち　銭${hero.zeni}枚${hero.arrows?`　矢${hero.arrows}本`:""}</p>${sub}
+    <div class="bagbox">${list}</div>
     <button class="go" id="sclose">店を出る</button>`);
+  d.classList.add("bagov");
   d.querySelector("#tbuy").onclick=()=>{SHOP_TAB="buy";openShop();};
-  d.querySelector("#tsell").onclick=()=>{SHOP_TAB="sell";openShop();};
+  d.querySelector("#tsell").onclick=()=>{SHOP_TAB="sell";SELL_ARM=null;openShop();};
+  d.querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{SELL_TAB=b.dataset.stab;SELL_ARM=null;sfx.take();openShop();});
   d.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{const[ch,p]=SHOP[+b.dataset.buy];if(hero.zeni<p)return;hero.zeni-=p;if(ch==="矢")hero.arrows=(hero.arrows||0)+5;else hero.bag.push(ch);sfx.pickup();openShop();});
-  d.querySelectorAll("[data-sell]").forEach(b=>b.onclick=()=>{
-    const x=SHOP._items[+b.dataset.sell],p=sellPrice(x.ch);if(!p)return;
-    if(x.from==="hand")S.hand=null;else hero.bag.splice(x.i,1);
-    hero.zeni+=p;sfx.place();sfx.pickup();openShop();
-  });
-  d.querySelector("#sclose").onclick=()=>{SHOP_TAB="buy";closeOverlay();saveGame();renderWorld();};
+  const sellCh=(ch,all)=>{const p=sellPrice(ch);if(!p)return 0;let n=0;
+    do{const i=hero.bag.indexOf(ch);if(i>=0){hero.bag.splice(i,1);n++;}else if(S.hand===ch){S.hand=null;n++;}else break;}while(all);
+    hero.zeni+=p*n;return n;};
+  d.querySelectorAll("[data-sell1]").forEach(b=>b.onclick=()=>{SELL_ARM=null;if(sellCh(decodeURIComponent(b.dataset.sell1),false)){sfx.pickup();openShop();}});
+  d.querySelectorAll("[data-sellall]").forEach(b=>b.onclick=()=>{SELL_ARM=null;if(sellCh(decodeURIComponent(b.dataset.sellall),true)){sfx.pickup();sfx.place();openShop();}});
+  d.querySelectorAll("[data-sellgrp]").forEach(b=>b.onclick=()=>{const k=b.dataset.sellgrp;if(SELL_ARM!==k){SELL_ARM=k;sfx.take();openShop();return;}
+    SELL_ARM=null;const g=BAG_GROUPS.find(x=>x.k===k);const chs=[...new Set([...hero.bag,...(S.hand?[S.hand]:[])])].filter(ch=>sellPrice(ch)&&g.f(ch)&&BAG_GROUPS.find(x=>x.f(ch))===g);
+    let sum=0;chs.forEach(ch=>{const p=sellPrice(ch);sum+=p*sellCh(ch,true);});sfx.win();say(`${g.t}をまとめて売った。銭${sum}枚になった。`);openShop();});
+  d.querySelector("#sclose").onclick=()=>{SHOP_TAB="buy";SELL_ARM=null;closeOverlay();saveGame();renderWorld();};
 }
 function openForge(){
   const all=[...(hero.eq||[]).filter(Boolean),...hero.bag.filter(isWeapon)];
