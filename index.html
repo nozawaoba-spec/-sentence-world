@@ -905,7 +905,7 @@ const BIOMES=[
 ];
 const BIOME_IX=Object.fromEntries(BIOMES.map((b,i)=>[b.k,i]));
 function biomeAt(r,c){
-  if(Math.abs(r-OR-22)+Math.abs(c-OC-12)<110)return 0;
+  if(Math.abs(r-OR-22)+Math.abs(c-OC-12)<60)return 0;
   if([[6,0],[-6,0],[0,6],[0,-6]].some(([a,b])=>!isLand(r+a,c+b)))return BIOME_IX.shore;
   const t=vnoise(c,r,190,41),h=vnoise(c,r,170,42);
   if(t<.3)return BIOME_IX.snow;
@@ -1110,7 +1110,7 @@ function pickMob(r,c,tier,rnd){
     if(rnd()<.6)return pick(rnd,ISLE_MOBS.filter(m=>tier>=2||!MOBS[m].strong));
   }
   const bk=typeof biomeAt==="function"?BIOMES[biomeAt(r,c)].k:"no";
-  if(BIOME_MOBS[bk]&&rnd()<.65){const pool=BIOME_MOBS[bk].filter(m=>tier>=2||!MOBS[m].strong);if(pool.length)return pick(rnd,pool);}
+  if(BIOME_MOBS[bk]&&rnd()<.8){const pool=BIOME_MOBS[bk].filter(m=>tier>=2||!MOBS[m].strong);if(pool.length)return pick(rnd,pool);}
   return pick(rnd,tierMobs(tier));
 }
 Object.assign(FOES,MOBS);
@@ -1119,7 +1119,7 @@ const ARENA_FLOOR={虚:["日","月","石","石","冫","令"],冥:["冫","令","�
 const THROW={石:1,岩:4,火:2,炎:5,木:1,林:2,森:3,明:3,日:1,月:1};
 FOES.鬼.still=true;
 const MOB_SET=new Set(Object.keys(MOBS));
-const TIER_MOBS=[["鼠","蝙"],["鼠","蝙","蛇"],["蛇","蜂","蝙"],["蜂","骸","蛇"],["狼","骸","霊"],["骸","霊","狼","蜂"],["霊","骸","狼"]];
+const TIER_MOBS=[["鼠","蝙","蛙","蟻","蝗","狐"],["鼠","蝙","蛇","蛙","蟻","狐","鴉","茸"],["蛇","蜂","蝙","蜘","猿","蟹","鴉","泥"],["蜂","骸","蛇","蠍","霜","泥","蜘","燐"],["狼","骸","霊","霆","嵐","燐","鷲"],["骸","霊","狼","蜂","熊","熔","鮫","霆"],["霊","骸","狼","熊","熔","鮫"]];
 const tierMobs=t=>TIER_MOBS[Math.max(0,Math.min(TIER_MOBS.length-1,t))];
 
 /* ================= 迷宮の生成（塔の階・地下） ================= */
