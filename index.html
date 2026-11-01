@@ -414,11 +414,22 @@ q .cmp{color:#e2b85c}
 .slot .si{display:flex;flex-direction:column;line-height:1.45}.slot .si em{font-style:normal;font-weight:800;color:var(--kami);font-size:14px}.slot .si small{color:var(--hai);font-size:11px}
 .slot .sb{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.slot .sb .go{padding:6px 14px;font-size:14px;letter-spacing:.1em}.slot .sb .linkbtn{font-size:11px}
 .slot.empty .si em{color:var(--hai)}
+#game,#game *,.dlg,.dlg *,.overlay,.overlay *,.bpanel,.bpanel *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+*{-webkit-tap-highlight-color:transparent}
+button{touch-action:manipulation}
+.bmenu{display:none}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;width:min(320px,100%)}
+.mgrid .go{padding:12px 6px;font-size:15px;letter-spacing:.1em}
 /* スマホ：一画面に収める */
 @media (pointer:coarse),(max-height:820px){
   body{padding-block:8px}
   .game{gap:6px}
   .keys .khint{display:none}
+  .keys .klinks{display:none}
+  .keys .bmenu{display:inline-block;background:none;border:1px solid var(--usu);color:var(--kami);padding:8px 28px;font:inherit;font-size:14px;letter-spacing:.2em;cursor:pointer;text-decoration:none;border-radius:3px}
+  .keys{margin-top:14px}
+  .ctl{gap:16px}
+  .pad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,44px);gap:5px}
   .keys{line-height:1.5}
   .pad{grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,38px);gap:3px}
   .acts{gap:4px}
@@ -1898,7 +1909,13 @@ function siteAt(P,pr,pc){
   }
   return{r0,c0,w,half,stand:[pr,pc],clear};
 }
+const SITE_CACHE=new Map();
 function siteFor(P){
+  const key=P.k+"|"+S.me.join(",")+"|"+S.turn;if(SITE_CACHE.has(key))return SITE_CACHE.get(key);
+  if(SITE_CACHE.size>64)SITE_CACHE.clear();
+  const res=siteForRaw(P);SITE_CACHE.set(key,res);return res;
+}
+function siteForRaw(P){
   const here=siteAt(P,S.me[0],S.me[1]);if(!here.err)return here;
   if(stampAt(S.me[0],S.me[1])||townAt(S.me[0],S.me[1]))return here;
   let best=null,bs=1e9;
@@ -1918,14 +1935,23 @@ function panel(html){
   return p;
 }
 function closePanel(){const p=$("#bp");if(p)p.remove();BP=null;}
+let BP_T=0,BP_POS="";
 function refreshPanel(){
   if(!BP)return;
   if(!S||B||S.done){closePanel();return;}
-  if(BP==="build"&&S.cur==="world")openBuild(true);
-  else if(BP==="furnish"&&S.cur.startsWith("my:"))openFurnish();
-  else if(S.cur.startsWith("my:"))openFurnish();
-  else if(S.cur==="world")openBuild(true);
-  else closePanel();
+  if(BP==="furnish"&&S.cur.startsWith("my:")){openFurnish();return;}
+  if(BP==="build"&&S.cur==="world"){
+    const pos=S.me.join(",")+S.face;if(pos===BP_POS)return;BP_POS=pos;
+    clearTimeout(BP_T);BP_T=setTimeout(()=>{if(BP==="build"&&S&&S.cur==="world"&&!B)openBuild(true);},280);return;}
+  closePanel();
+}
+function openMenu(){
+  if(!S||B||lock||DLG)return;
+  const items=[["手引き",showHelp],["地図",showMap],["武器",openEquip],["字袋",openBag],["建てる",()=>{closeOverlay();toggleBuild();}],[SND.on?"音を消す":"音を出す",()=>{closeOverlay();toggleSound();renderWorld();}],[SPK.on?"読み上げを切る":"読み上げる",()=>{closeOverlay();toggleSpeak();}],["題字へ",title],["初めから",()=>{closeOverlay();confirmRestart();}]];
+  const d=overlay(`<p class="lead">メニュー</p><div class="mgrid">${items.map(([t],i)=>`<button class="go sub" data-mi="${i}">${t}</button>`).join("")}</div><button class="go" id="bclose">閉じる</button>`);
+  d.classList.add("bagov");
+  d.querySelectorAll("[data-mi]").forEach(b=>b.onclick=()=>{const f=items[+b.dataset.mi][1];closeOverlay();f();});
+  $("#bclose").onclick=()=>{closeOverlay();renderWorld();};
 }
 function toggleBuild(){if(BP){closePanel();renderWorld();return;}openBuild();}
 const phead=t=>`<div class="ph"><b>${t}</b><span><button class="bpm" title="たたむ">${BP_MIN?"＋":"－"}</button><button class="bpx" title="閉じる">×</button></span></div>`;
@@ -2336,10 +2362,10 @@ function buildWorld(){
     </div>
   </div>
   <div class="keys"><span class="khint">移動 矢印・WASD ／ 取 J・Space ／ 分 K・Enter ／ 戻す Z ／ 地図 M ／ 字袋 I ／ 建てる U ／ 読み上げ V<br></span>
-    <button id="bhelp">手引き</button>　<button id="bmap">地図</button>　<button id="bweap">武器</button>　<button id="bbuild">建てる</button>　<button id="bs">音</button>　<button id="bspk" class="spkbtn">${SPK.on?"読上 あり":"読上 なし"}</button>　<button id="bm">題字へ</button>　<button id="bn">初めから</button></div>`;
+    <span class="klinks"><button id="bhelp">手引き</button>　<button id="bmap">地図</button>　<button id="bweap">武器</button>　<button id="bbuild">建てる</button>　<button id="bs">音</button>　<button id="bspk" class="spkbtn">${SPK.on?"読上 あり":"読上 なし"}</button>　<button id="bm">題字へ</button>　<button id="bn">初めから</button></span><button id="bmenu" class="bmenu">メニュー</button></div>`;
   document.querySelectorAll("[data-d]").forEach(b=>holdRepeat(b,()=>move(b.dataset.d,true)));
   $("#bt").onclick=take;$("#bb").onclick=bunkai;$("#bu").onclick=undo;$("#br").onclick=resetArea;
-  $("#bm").onclick=title;$("#bn").onclick=confirmRestart;$("#bs").onclick=toggleSound;$("#bspk").onclick=toggleSpeak;$("#bmap").onclick=showMap;$("#bhelp").onclick=showHelp;$("#bweap").onclick=openEquip;$("#bbuild").onclick=toggleBuild;$("#bbag2").onclick=openBag;$("#bmap2").onclick=showMap;{const tb=$("#tbuild");if(tb)tb.onclick=toggleBuild;}
+  $("#bmenu").onclick=openMenu;$("#bm").onclick=title;$("#bn").onclick=confirmRestart;$("#bs").onclick=toggleSound;$("#bspk").onclick=toggleSpeak;$("#bmap").onclick=showMap;$("#bhelp").onclick=showHelp;$("#bweap").onclick=openEquip;$("#bbuild").onclick=toggleBuild;$("#bbag2").onclick=openBag;$("#bmap2").onclick=showMap;{const tb=$("#tbuild");if(tb)tb.onclick=toggleBuild;}
   swipe($("#board"));
   renderWorld(true);
   fitWorld();
@@ -3324,6 +3350,8 @@ document.addEventListener("keydown",e=>{
 {const _b=bunkai;bunkai=function(){const t=S&&S.turn;_b();if(S&&S.turn!==t){S.flags.g_split=true;if(/を分けた/.test(S.msgs.map(m=>m.h).join("")))cnt("split");if(!B&&!lock&&$("#guide"))renderWorld();}};}
 {const _t=take;take=function(){const t=S&&S.turn;_t();if(S&&S.turn!==t){S.flags.g_take=true;if(!B&&!lock&&$("#guide"))renderWorld();}};}
 {const _p=sfx.push;sfx.push=function(){if(S&&!B)S.flags.g_push=true;return _p.apply(this,arguments);};}
+document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#game,.dlg,.overlay,.bpanel"))e.preventDefault();});
+document.addEventListener("selectstart",e=>{if(e.target.closest&&e.target.closest("#game,.dlg,.overlay,.bpanel"))e.preventDefault();});
 let rz,lastW=document.documentElement.clientWidth,lastH=vpH();
 function onResize(){clearTimeout(rz);rz=setTimeout(()=>{
   const w=document.documentElement.clientWidth,h=vpH(),dw=Math.abs(w-lastW),dh=Math.abs(h-lastH);
