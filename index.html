@@ -812,6 +812,7 @@ function foeRules(text){
   const broken=text.includes("壊"),sealed=text.includes("封");
   return{invincible:text.includes("無敵"),immortal:text.includes("不死"),hide:!sealed&&(text.includes("飛")||text.includes("見えない")),fly:!sealed&&text.includes("飛"),
     hard:text.includes("硬")&&!broken,fast:!sealed&&text.includes("速"),sleep:text.includes("眠"),eat:!sealed&&text.includes("喰"),dmg,broken,poison:text.includes("毒"),bind:text.includes("縛"),
+    steal:text.includes("盗"),call:text.includes("群"),split:text.includes("分か"),rewrite:text.includes("書きかえ"),suck:text.includes("血を吸"),
     blind:text.includes("盲"),slow:text.includes("遅"),frozen:text.includes("凍"),confused:text.includes("乱"),brittle:text.includes("脆"),invis:text.includes("見えない"),text};
 }
 
@@ -968,7 +969,7 @@ function worldCell(r,c){
   const f=vnoise(c,r,30,5),hh=h2(c,r,6);
   if(f>(BM.dense?.46:BM.dry?.66:.56)&&hh<.6)return[BM.tree?BM.tree:(hh<.03?"森":hh<.09?"林":"木"),"#"];
   if(hh>.9985)return[LOOSE_WILD[Math.floor(h2(c,r,7)*LOOSE_WILD.length)],"+"];
-  if(hh>.968&&hh<.972){const d=Math.abs(r-OR-22)+Math.abs(c-OC-12);return[pick(rngOf(Math.floor(hh*1e9)),tierMobs(Math.min(4,Math.floor(d/260)))),"."];}
+  if(hh>.968&&hh<.972){const d=Math.abs(r-OR-22)+Math.abs(c-OC-12);return[pickMob(r,c,Math.min(4,Math.floor(d/260)),rngOf(Math.floor(hh*1e9))),"."];}
   if(hh>.972&&hh<.9975)return[BM.tree||"木","#"];
   if(hh>.9982)return[h2(r,c,17)<.4?"薬":pick(rngOf(Math.floor(hh*1e9)),RARE_POOL),"."];
   return null;
@@ -1071,7 +1072,47 @@ const MOBS={
   狼:{name:"狼",glyph:"狼",hp:4,lines:["狼は速い","狼の牙は鋭い"],weapon:"牙",exp:3},
   骸:{name:"骸骨",glyph:"骸",hp:3,lines:["骸骨は不死","骸骨の骨は硬い"],weapon:"骨",exp:3},
   霊:{name:"亡霊",glyph:"霊",hp:3,lines:["亡霊は姿が見えない","亡霊の手は重い"],weapon:"手",exp:3},
+  /* 動物・虫 */
+  蛙:{name:"大蛙",glyph:"蛙",hp:3,lines:["蛙の舌は速い"],weapon:"舌",exp:2,loot:"速"},
+  蛭:{name:"大蛭",glyph:"蛭",hp:3,lines:["蛭は血を吸う"],weapon:"口",exp:2,loot:"吸"},
+  蜘:{name:"蜘蛛",glyph:"蜘",hp:3,lines:["蜘蛛は群れる","蜘蛛の牙は鋭い"],weapon:"牙",exp:3,loot:"縛"},
+  蟻:{name:"大蟻",glyph:"蟻",hp:2,lines:["蟻は群れる"],weapon:"顎",exp:2,loot:"木"},
+  狐:{name:"狐",glyph:"狐",hp:4,lines:["狐は字を盗む","狐は速い"],weapon:"爪",exp:3,loot:"隠"},
+  鴉:{name:"鴉",glyph:"鴉",hp:3,lines:["鴉は飛ぶ","鴉は字を盗む"],weapon:"嘴",exp:3,loot:"跳"},
+  猿:{name:"山猿",glyph:"猿",hp:4,lines:["猿は字を盗む","猿の爪は鋭い"],weapon:"爪",exp:3,loot:"避"},
+  熊:{name:"大熊",glyph:"熊",hp:8,strong:true,lines:["熊は硬い","熊の爪は強い"],weapon:"爪",exp:7,loot:"盾"},
+  鷲:{name:"大鷲",glyph:"鷲",hp:5,lines:["鷲は空を飛ぶ","鷲の爪は鋭い"],weapon:"爪",exp:4,loot:"速"},
+  蠍:{name:"大蠍",glyph:"蠍",hp:5,lines:["蠍は硬い","蠍の針は鋭い"],weapon:"針",exp:4,loot:"毒"},
+  蟹:{name:"大蟹",glyph:"蟹",hp:4,lines:["蟹は硬い"],weapon:"鋏",exp:3,loot:"盾"},
+  鮫:{name:"鮫",glyph:"鮫",hp:8,strong:true,lines:["鮫は速い","鮫の牙は強い"],weapon:"牙",exp:7,loot:"鋭"},
+  蝗:{name:"蝗",glyph:"蝗",hp:2,lines:["蝗は群れる","蝗は字を喰う"],weapon:"顎",exp:2,loot:"花"},
+  /* 自然・元素 */
+  霆:{name:"雷獣",glyph:"霆",hp:5,lines:["霆は速い","霆の光は鋭い"],weapon:"稲妻",exp:4,loot:"乱"},
+  霜:{name:"霜の精",glyph:"霜",hp:4,lines:["霜は姿が見えない"],weapon:"冷気",exp:3,loot:"凍"},
+  嵐:{name:"砂嵐",glyph:"嵐",hp:5,lines:["嵐は速い","嵐は分かれる"],weapon:"砂",exp:4,loot:"跳"},
+  熔:{name:"熔岩魔",glyph:"熔",hp:8,strong:true,lines:["熔は熱い","熔は硬い"],weapon:"熔岩",exp:7,loot:"石"},
+  泥:{name:"泥人形",glyph:"泥",hp:5,lines:["泥は分かれる"],weapon:"腕",exp:3,loot:"鈍"},
+  茸:{name:"化け茸",glyph:"茸",hp:3,lines:["茸は分かれる"],weapon:"胞子",exp:2,loot:"薬"},
+  燐:{name:"鬼火",glyph:"燐",hp:4,lines:["燐は飛ぶ","燐は熱い"],weapon:"炎",exp:4,loot:"火"},
+  渦:{name:"渦潮",glyph:"渦",hp:5,lines:["渦は分かれる","渦は速い"],weapon:"水流",exp:4,loot:"水"},
+  /* 島だけの珍しい敵（文を書きかえる） */
+  狢:{name:"狢",glyph:"狢",hp:6,rare:true,lines:["狢は文を書きかえる","狢は姿が見えない"],weapon:"爪",exp:9,loot:"封",dropRate:1,zeni:30},
+  蛟:{name:"蛟",glyph:"蛟",hp:7,rare:true,strong:true,lines:["蛟は文を書きかえる","蛟は速い","蛟の牙は鋭い"],weapon:"牙",exp:12,loot:"命",dropRate:1,zeni:45},
+  鵺:{name:"鵺",glyph:"鵺",hp:10,rare:true,strong:true,lines:["鵺は文を書きかえる","鵺は空を飛ぶ","鵺の爪は強い"],weapon:"爪",exp:16,loot:"勇",dropRate:1,zeni:60},
 };
+const BIOME_MOBS={snow:["熊","鷲","霜","霜"],sand:["蠍","嵐","蠍"],fire:["熔","燐","霆","燐"],flower:["狐","蝗","蝗"],swamp:["蛙","蛭","泥","茸"],bamboo:["猿","蟻","蟻"],shore:["蟹","鴉","鮫","蟹"]};
+const ISLE_MOBS=["渦","鴉","蟹","渦","鮫"],RARE_MOBS=["狢","蛟","鵺"];
+function pickMob(r,c,tier,rnd){
+  rnd=rnd||Math.random;
+  const I=typeof inIsland==="function"?inIsland(r,c):null;
+  if(I&&!I.tower&&!I.town){
+    if(rnd()<.1){const pool=tier>=4?RARE_MOBS:RARE_MOBS.slice(0,2);return pick(rnd,pool);}
+    if(rnd()<.6)return pick(rnd,ISLE_MOBS.filter(m=>tier>=2||!MOBS[m].strong));
+  }
+  const bk=typeof biomeAt==="function"?BIOMES[biomeAt(r,c)].k:"no";
+  if(BIOME_MOBS[bk]&&rnd()<.65){const pool=BIOME_MOBS[bk].filter(m=>tier>=2||!MOBS[m].strong);if(pool.length)return pick(rnd,pool);}
+  return pick(rnd,tierMobs(tier));
+}
 Object.assign(FOES,MOBS);
 FOES.猪={name:"大猪",glyph:"猪",hp:5,lines:["大猪は硬い","大猪の牙は鋭い"],open:"大猪が地をけって突っこんできた！",weapon:"牙",tutorial:true,raidBoss:true,exp:4};
 const ARENA_FLOOR={虚:["日","月","石","石","冫","令"],冥:["冫","令","冫","令","石","石"],黙:["石","石","石","石","目","民","日","月"],幻:["日","月","火","火","石","石"],龍:["冫","令","日","月","火","火","石","石"],猪:["石","石"],霞:["日","月","石","石"],魔:["冫","令","火","石"],巌:["石","石","目","民"],獏:["目","民","日","月","石"],竜:["冫","令","日","月","火","火"],鬼:["石","石","冫","令"]};
@@ -1112,7 +1153,7 @@ function genFloor(seed,o){
   for(let i=free.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[free[i],free[j]]=[free[j],free[i]];}
   const mask=Array.from({length:H},()=>Array(W).fill("#"));
   const placeAt=(ch,k)=>{let f;while((f=free.pop())&&g[f[0]][f[1]]!=="　");if(!f)return;g[f[0]][f[1]]=ch;mask[f[0]][f[1]]=k;};
-  const mobs=tierMobs(o.tier||0);
+  const mobs=[...tierMobs(o.tier||0),...(o.extra||[])];
   for(let i=0;i<(o.enemies||0);i++)placeAt(pick(rnd,mobs),".");
   const deadEnds=free.filter(([r,c])=>g[r][c]==="　"&&[[1,0],[-1,0],[0,1],[0,-1]].filter(([dr,dc])=>g[r+dr]&&g[r+dr][c+dc]!==wall&&g[r+dr][c+dc]!=="窓").length===1);
   const placeDead=(ch,k)=>{const f=deadEnds.pop();if(!f||g[f[0]][f[1]]!=="　")return false;g[f[0]][f[1]]=ch;mask[f[0]][f[1]]=k;return true;};
@@ -1133,14 +1174,14 @@ const TOWER_SEED={E:11,W:23,S:37,N:41,F:59};
 function stairDoor(to,gen,face){return{to,gen,face};}
 function towerFloorDef(id){
   const[,K,ns]=id.split(":"),n=+ns,Nf=TOWER_FLOORS[K],tier=TOWER_TIER[K]+Math.floor(n/5);
-  const f=genFloor(TOWER_SEED[K]*1000+n,{W:17,H:13,win:true,enemies:1+Math.floor(n/4),items:2,tier});
+  const f=genFloor(TOWER_SEED[K]*1000+n,{W:17,H:13,win:true,enemies:1+Math.floor(n/4),items:2,tier,extra:["蜘","燐","霆","鴉"]});
   const below=n===1?{to:"world",at:K==="F"?[TOWER_GATE[0]+1,TOWER_GATE[1]]:[OR+4,OC+12],face:"down"}:n===2&&K!=="F"?{to:K+"_t1",at:[1,5],face:"down"}:stairDoor(`tw:${K}:${n-1}`,"up","down");
   const above=n+1>=Nf?{to:K==="F"?"tower":K+"_t2",at:[5,5],face:"up"}:stairDoor(`tw:${K}:${n+1}`,"down","up");
   return gridDef(`${TOWER_NAME[K]}　${KNUM(n)}階`,f,{[f.A+""]:below,[f.B+""]:above},tier,null);
 }
 function caveDef(id){
   const[,bi,bj,lv]=id.split(":").map(x=>+x||x),depth=caveDepth(+bi,+bj),last=+lv>=depth,tier=1+(+lv);
-  const f=genFloor((+bi*97+ +bj*31)*100+(+lv),{W:19,H:13,wall:"岩",enemies:1+(+lv),items:3,tier,aCh:"階",bCh:last?"宝":"穴"});
+  const f=genFloor((+bi*97+ +bj*31)*100+(+lv),{W:19,H:13,wall:"岩",enemies:1+(+lv),items:3,tier,extra:["蜘","茸","燐","蟻","蛭"],aCh:"階",bCh:last?"宝":"穴"});
   const r=ruinOf(+bi,+bj);
   const up=+lv===1?{to:"world",at:[r.hole[0]+1,r.hole[1]],face:"down"}:stairDoor(`ug:${bi}:${bj}:${+lv-1}`,"down","up");
   const doors={[f.A+""]:up};
@@ -1711,7 +1752,7 @@ function gNewQuest(){
   const types=["hunt","hunt","deliver","craft","invent","cut","walk","split","combine","chest","visit","write","erase","weapon"];
   if((S.flags.houses||[]).length)types.push("furn");
   const ty=pick(rnd,types);let q;
-  if(ty==="hunt"){const pool=rk<1?["鼠","蝙","蛇","蜂"]:rk<3?["蛇","蜂","狼","骸"]:["狼","骸","霊"];const ch=pick(rnd,pool),n=R(2,3+lv);q={ty,ch,n,t:`${MOBS[ch]?MOBS[ch].name:ch}を${n}匹たおせ`};}
+  if(ty==="hunt"){const pool=rk<1?["鼠","蝙","蛇","蜂","蛙","蟻","蝗"]:rk<3?["蛇","蜂","狼","骸","狐","蟹","蜘","霜","泥"]:["狼","骸","霊","熊","蠍","燐","霆","嵐","鮫","熔"];const ch=pick(rnd,pool),n=R(2,3+lv);q={ty,ch,n,t:`${MOBS[ch]?MOBS[ch].name:ch}を${n}匹たおせ`};}
   else if(ty==="deliver"){const ch=pick(rnd,G_DELIVER.slice(0,4+lv*2)),n=R(2,3+lv);q={ty,ch,n,t:`［${ch}］の字を${n}つ納めよ`};}
   else if(ty==="craft"){const ch=pick(rnd,G_CRAFT);const r=RECIPES.find(x=>x[2]===ch);q={ty,ch,n:1,t:`［${ch}］の字を作って納めよ`,hint:r?`${r[0]}＋${r[1]}`:""};}
   else if(ty==="invent"){const n=3+Math.min(3,Math.floor(rnd()*(1+lv)));q={ty,n,t:`部品が${n}つ以上の創作文字を納めよ`};}
@@ -2287,7 +2328,7 @@ function spawnWild(){
   for(let t=0;t<12;t++){
     const ang=Math.random()*Math.PI*2,d=6+Math.floor(Math.random()*3),r=pr+Math.round(Math.sin(ang)*d),c=pc+Math.round(Math.cos(ang)*d);
     if(at(r,c)===null&&!stampAt(r,c)&&!townAt(r,c)&&!zoneAt(r,c,zs)){
-      const dist=Math.abs(r-OR-22)+Math.abs(c-OC-12),ch=pick(Math.random,tierMobs(Math.min(5,Math.floor(dist/240))));
+      const dist=Math.abs(r-OR-22)+Math.abs(c-OC-12),ch=pickMob(r,c,Math.min(5,Math.floor(dist/240)));
       const o=mkObj(ch);o.home=r+","+c;setCell(r,c,o);return;
     }
   }
@@ -2623,6 +2664,7 @@ const HELP=[
   ["字の組合","始まりの村の宿（出張所）や、各地の町の「字の組合」で、［受］に話しかける。村を守ると登録できる。掲示板の依頼（討・納・作・創・採・歩・分・合・探・置・訪・書・削・武）を三つまで受け、果たしたら報告すると銭と功がもらえる。功がたまると札が上がる（木→銅→銀→金→玉）。銅札で組合の店、銀札で心が増え、金札で武器、玉札で心と銭。"],
   ["旅の記録","記録は三つまで。題字の画面で、つづき・初めから・消すを選べる。いま遊んでいる記録に、自動で書きこまれる。"],
   ["クリアのあと","墨竜を討ったあとも「世界へ戻る」で旅を続けられる。竜の墨が四つの島に散り、裏の物語がはじまる。四つの影を祓うと……。"],
+  ["雑魚の敵","土地ごとに出る敵がちがう。洞窟や塔、島にしかいない敵もいる。「字を盗む」敵は字袋の字を盗み、盗みが重なると逃げる（倒せば取り返せる）。「群れる」敵は仲間を呼ぶ。「分かれる」敵は一度倒しても分かれて立ち上がる。島には、文を書きかえるめずらしい敵もいる。どれも、その字を［削］で消せば止められる。"],
   ["字袋と道具","拾った字は字袋へ。押すと手に持つ。弱・冷・眠・毒・縛などは敵の文に、速・強・盾・癒などは我の文に書く。丹・帰・跳・隠・命は押すと使える。"],
   ["雑魚との戦い","斬・削・書・薬・逃。敵の文から厄介な字（無敵・飛・硬・強…）を削り、我の文を強くして斬る。"],
   ["番人・ボスとの戦い","盤の上を歩く。赤いマスは攻撃の予告（一歩でよけられる）。回る字に体当たりで削る、［分］で分ける、床の字を押して合わせる・ぶつける、［突］で離れて攻撃。「平面で見る」で見やすくなる。"],
@@ -3145,12 +3187,24 @@ function foeTurn(){
   if(R.confused&&Math.random()<.5){const d=Math.max(1,R.dmg);B.hp-=d;B.log.push(`${f.name}は混乱して、自分を打った。${d}の傷。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}B.busy=false;renderBattle({hit:true});return;}
   const edible=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c));
   if(R.eat&&edible.length){const[ch,i]=edible[Math.random()*edible.length|0];hero.bag.splice(i,1);B.log.push(`!${f.name}が字袋の${Q(ch)}を喰った。`);}
-  const times=R.fast?2:1;
+  if(R.steal){const can=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c)&&!isWeapon(c));
+    if(can.length&&Math.random()<.4){const[ch,i]=can[Math.random()*can.length|0];hero.bag.splice(i,1);B.stolen=B.stolen||[];B.stolen.push(ch);B.log.push(`!${f.name}が字袋の${Q(ch)}を盗んだ！　倒せば取り返せる。`);sfx.take();
+      if(B.stolen.length>=2&&Math.random()<.45){B.log.push(`!${f.name}は盗んだ字をくわえて、逃げていった……。`);B.busy=true;renderBattle(anim);setTimeout(foeFled,1100);return;}}}
+  if(R.call&&B.tn%3===1&&(B.allies||0)<3){B.allies=(B.allies||0)+1;B.hp+=2;B.max+=2;B.log.push(`!仲間の${f.name}が集まってきた！（${B.allies+1}匹）　「群」を削れば、もう呼べない。`);sfx.foe&&sfx.foe();}
+  if(R.rewrite&&B.tn%2===0){
+    const selfI=(B.self||[]).findIndex(Boolean);
+    if(selfI>=0){const old=B.self[selfI];B.self[selfI]=null;B.log.push(`!${f.name}が、我の文の${Q(old)}を書き消した！`);}
+    else{let done=false;
+      for(const l of B.lines){for(let i=1;i<l.length&&!done;i++){if("弱冷柔鈍眠縛盲遅凍乱脆封".includes(l[i])){const old=l[i];l[i]=pick(Math.random,["強","鋭","速"]);B.log.push(`!${f.name}が、自分の文の${Q(old)}を${Q(l[i])}に書きかえた！`);done=true;}}if(done)break;}
+      if(!done)for(const l of B.lines){const i=l.indexOf("　",1);if(i>0){l[i]=pick(Math.random,["強","鋭","硬"]);B.log.push(`!${f.name}が、自分の文に${Q(l[i])}と書きこんだ！`);done=true;break;}}}
+    sfx.write();}
+  const times=(R.fast?2:1)+Math.ceil((B.allies||0)/2);
   for(let k=0;k<times;k++){
     const dm=Math.max(0,R.dmg-F.guard);
     if(F.evade&&Math.random()<.5){B.log.push(`${f.name}の${f.weapon}を、ひらりとかわした。`);continue;}
     if(R.blind&&Math.random()<.5){B.log.push(`${f.name}の${f.weapon}は、目がくらんで空を切った。`);continue;}
     if(dm>0){hero.hp-=dm;sfx.hurt();anim.hurt=true;B.log.push(`!${f.name}の${f.weapon}が我を打った。心を${dm}つ失った。${R.fast&&k===0?"速い！":""}`);
+      if(R.suck&&B.hp<B.max){B.hp++;B.log.push(`!${f.name}は血を吸って、傷をひとつ癒やした。`);}
       if(F.reflect){B.hp-=1;B.log.push(`返の字が、1の傷をはね返した。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}}}
     else{sfx.bump();B.log.push(`${f.name}の${f.weapon}は、我にまるで効かない。`);}
     if(hero.hp<=0)break;
@@ -3184,7 +3238,13 @@ function raidDone(){
     hero.bag.push("薬","薬","木","木","木");hero.zeni+=10;sfx.win();say("村を守った！　南口が開いた。家を建てる心得も覚えた。");saveGame();renderWorld();setTimeout(()=>tip("build"),300);
   });
 }
+function foeFled(){
+  if(!B)return;const{r,c,f}=B;B=null;setCell(r,c,null);buildWorld();say(`${Q(f.name)}に逃げられた。盗まれた字は戻らなかった……。`,"bad");saveGame();renderWorld();
+}
 function winBattle(){
+  if(B&&!B.arena&&!B.splitDone&&B.f&&MOB_SET.has(B.f.glyph)&&foeRules(bText()).split){
+    B.splitDone=true;B.hp=Math.max(2,Math.ceil(B.max/2));B.busy=false;B.log.push(`!${B.f.name}は二つに分かれて、また立ち上がった！　（「分」を削れば分かれない）`);sfx.split();renderBattle({hit:true});return;}
+  const STOLEN=B&&B.stolen?B.stolen.slice():[],ALLIES=B&&B.allies||0;
   if(S&&B&&B.f){S.flags.kills=S.flags.kills||{};const g=B.f.glyph||B.f.name;S.flags.kills[g]=(S.flags.kills[g]||0)+1;setTimeout(checkQuests,600);}
   if(S&&B&&!B.arena)S.flags.g_bwin=(S.flags.g_bwin||0)+1;
   const{r,c,f}=B;const wasRaid=!!(at(r,c)||{}).raid;B=null;
@@ -3206,8 +3266,10 @@ function winBattle(){
   {const g=weaponGrow();if(g)msg+=" "+g;}
   const WDROP={霞:"弓",魔:"銛",巌:"戟",獏:"鎌",鬼:"槍"};
   if(WDROP[f.glyph]&&!S.flags["w_"+f.glyph]){S.flags["w_"+f.glyph]=true;const w=WDROP[f.glyph];const where=addWeapon(w);msg+=` 武器${Q(w)}を手に入れた（${where}）。`;}
+  if(STOLEN.length){hero.bag.push(...STOLEN);msg+=` 盗まれた${STOLEN.map(Q).join("")}を取り返した。`;}
   if(f.exp){
-    const z=1+Math.floor(Math.random()*3)+Math.floor((D().tier||0)/2);hero.zeni+=z;hero.exp+=f.exp;msg+=` 経験${f.exp}、銭${z}枚。`;
+    const z=1+Math.floor(Math.random()*3)+Math.floor((D().tier||0)/2)+(f.zeni||0)+ALLIES*2;hero.zeni+=z;hero.exp+=f.exp+ALLIES;msg+=` 経験${f.exp+ALLIES}、銭${z}枚。`;
+    if(f.loot&&Math.random()<(f.dropRate||.35)){hero.bag.push(f.loot);msg+=` ${Q(f.loot)}の字を落とした。${f.rare?"（珍しい敵だ！）":""}`;}
     if(Math.random()<.18){hero.bag.push("薬");msg+=` ${Q("薬")}を落とした。`;}
     else if(Math.random()<.25&&(hero.eq||[]).includes("弓")){const n=2+Math.floor(Math.random()*3);hero.arrows+=n;msg+=` 矢を${n}本拾った。`;}
     else if(Math.random()<.3){const g=pick(Math.random,RARE_POOL);hero.bag.push(g);msg+=` ${Q(g)}の字を落とした。`;}
