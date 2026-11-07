@@ -168,7 +168,7 @@ q{quotes:"「" "」";font-weight:800}
 .board{overflow:hidden;border-block:1px solid var(--usu)}
 .layer{position:absolute;left:0;top:0;transition:transform .16s ease-out}
 .o.furn{color:var(--kami);font-weight:700;opacity:.85}
-.o.wallc{color:var(--usu);font-weight:700}
+.o.wallc{color:color-mix(in srgb,var(--kami) 72%,var(--usu));font-weight:800;background:color-mix(in srgb,var(--kami) 9%,transparent)}
 .o.zone.lock{color:var(--shu);font-weight:800}
 .place{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:9;pointer-events:none;font-size:14px;font-weight:800;letter-spacing:.3em;padding:2px 12px;background:color-mix(in srgb,var(--yami) 80%,transparent);border:1px solid var(--usu);color:var(--kami);white-space:nowrap;animation:placefade 2.2s ease forwards}
 @keyframes placefade{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
@@ -461,7 +461,16 @@ button{touch-action:manipulation}
 .ch3.wall3>span{color:#d8d0c0;background:color-mix(in srgb,#5a5248 85%,transparent);border-radius:3px}
 .ch3.wall3.spike>span{color:#bfe39a;background:color-mix(in srgb,#2f5a2a 85%,transparent)}
 .ch3.min3>span{color:var(--shu);font-size:calc(var(--acs)*.75)}
-.ch3.boss.decoy>span{opacity:.6}
+.ch3.boss.decoy.seen>span{opacity:.4;filter:blur(.5px)}
+.ch3.orb.glow>span{text-shadow:0 0 6px #ffe27a,0 0 12px #ffcf3a;color:#ffe9a8}
+.o .alert{position:absolute;top:-.55em;right:-.1em;font-size:.7em;color:#ff5a3c;font-style:normal;font-weight:900;animation:alertpop .3s ease-out}
+@keyframes alertpop{from{transform:scale(2);opacity:0}to{transform:scale(1);opacity:1}}
+.o.me.hidden span{opacity:.35;filter:blur(.4px)}
+.o.me .hidn{position:absolute;top:-.4em;right:-.25em;font-size:.45em;font-style:normal;color:var(--kami);opacity:.85}
+.o.me .boatc{position:absolute;left:0;right:0;bottom:-.3em;text-align:center;font-size:.6em;font-style:normal;color:#e2b85c}
+.o.me.flyup span{animation:flyup .7s ease-in forwards!important}
+@keyframes flyup{0%{transform:translateY(0)}20%{transform:translateY(8%) scale(1.05)}100%{transform:translateY(-500%) scale(.5);opacity:0}}
+.hidtag{color:#9fd3ff;font-weight:700}
 </style>
 
 <div class="game" id="game"></div>
@@ -512,7 +521,7 @@ const INTERIORS={
   N_t2:{name:"夢の塔　二階",rows:["壁壁窓壁壁窓壁壁窓壁壁", "壁　　　　　　　　　壁", "壁　　　　獏　　　　壁", "窓　　　　　　　　　窓", "壁　　　　　　　　　壁", "壁　　　　　　　　　壁", "壁壁壁壁壁階壁壁壁壁壁"],mask:["###########", "#.........#", "#.........#", "#.........#", "#.........#", "#.........#", "#####.#####"],doors:{"6,5": {"to": "N_t1", "at": [1, 5], "face": "down"}},npcs:{},intro:[["", "夢の塔の二階。獏が、灯の光をくわえて眠そうに目を細めている。"]],contents:{},zones:{},texts:{}}
 };
 /* ================= 字の決まり ================= */
-const RECIPES=[["日","月","明"],["火","火","炎"],["木","木","林"],["林","木","森"],["七","刀","切"],["人","木","休"],["女","子","好"],["石","石","岩"],["石","更","硬"],["弓","虽","強"],["金","兌","鋭"],["口","食","喰"],["辶","束","速"],["冫","令","冷"],["目","民","眠"],["木","奉","棒"],["无","攵","敵"],["木","倉","槍"],["金","舌","銛"],["金","兼","鎌"],["木","丈","杖"],["卓","戈","戟"],["金","夆","鉾"],["単","戈","戦"],["人","戈","伐"],["弓","玄","弦"],["弓","丨","引"]];
+const RECIPES=[["陽","月","晃"],["星","灯","煌"],["晃","煌","光"],["日","月","明"],["火","火","炎"],["木","木","林"],["林","木","森"],["七","刀","切"],["人","木","休"],["女","子","好"],["石","石","岩"],["石","更","硬"],["弓","虽","強"],["金","兌","鋭"],["口","食","喰"],["辶","束","速"],["冫","令","冷"],["目","民","眠"],["木","奉","棒"],["无","攵","敵"],["木","倉","槍"],["金","舌","銛"],["金","兼","鎌"],["木","丈","杖"],["卓","戈","戟"],["金","夆","鉾"],["単","戈","戦"],["人","戈","伐"],["弓","玄","弦"],["弓","丨","引"]];
 const combine=(a,b)=>{const r=RECIPES.find(x=>(x[0]===a&&x[1]===b)||(x[0]===b&&x[1]===a));return r&&r[2];};
 const isCmp=c=>typeof c==="string"&&(c[0]==="⿰"||c[0]==="⿱");
 const IDS_OP=new Set(["⿰","⿱"]);
@@ -587,7 +596,7 @@ function weaponFx(R){
   if(els.has("土")&&/[飛蜂蝙]/.test(t))weak=true;
   return{atk,reach,pierce:sp.has("貫"),shoot:sp.has("射"),light:sp.has("照"),sweep:sp.has("払"),drain:sp.has("吸"),els:[...els],weak,bow,noArrow};
 }
-function strikeBlock(R,W){if(R.guarded)return"guard";if(W.noArrow&&W.atk===0&&!(hero.eq||[]).some(ch=>ch&&wBase(ch)&&wBase(ch).base!=="弓"))return"noarrow";if(R.fly&&!W.shoot)return"fly";if(R.hide&&R.invis&&!W.light)return"invis";if(R.invincible)return"inv";if(R.hard&&!W.pierce)return"hard";return null;}
+function strikeBlock(R,W){if(R.guarded)return"guard";if(R.hard&&gearOn("helm","剛"))R={...R,hard:false};if(W.noArrow&&W.atk===0&&!(hero.eq||[]).some(ch=>ch&&wBase(ch)&&wBase(ch).base!=="弓"))return"noarrow";if(R.fly&&!W.shoot)return"fly";if(R.hide&&R.invis&&!W.light)return"invis";if(R.invincible)return"inv";if(R.hard&&!W.pierce)return"hard";return null;}
 const BLOCK_MSG={guard:n=>`斬った。だが${n}は守られている。「守」を削らねば、傷は入らない。`,noarrow:n=>"矢がない。弓は弦を鳴らすばかりだ。",fly:n=>`${n}は空の上。刃が届かない。`,invis:n=>`${n}の姿が見えない。刃は空を切った。`,inv:n=>`斬った。だが${n}は無敵だ。`,hard:n=>`刃が通らない。${n}は硬い。`};
 function afterStrike(W,lines,log){
   if(W.bow){hero.arrows=Math.max(0,hero.arrows-1);log.push(hero.arrows?`矢を一本放った。（残り${hero.arrows}本）`:"!最後の矢を放った。矢が尽きた。");}
@@ -617,7 +626,7 @@ function addWeapon(ch){
 const CONTAINS={机:"紙",壺:"薬",箱:"薬",鏡:"我",樽:"薬",宝:"宝"};
 const LIGHTS=new Set(["陽","月","星","灯"]);
 const CONTAIN_MSG={机:"引き出しの奥に",壺:"壺の底に",箱:"箱の中に",樽:"樽の中に",棚:"棚の奥に",鏡:"鏡の中から、もうひとりの"};
-const ITEM_INFO={弱:"敵の文に書くと、攻撃が効かなくなる",冷:"熱いものを冷ます。敵の攻撃が効かなくなる",柔:"硬いものを和らげる",眠:"敵の文に書くと、眠らせる",
+const ITEM_INFO={晃:"陽と月の光。星と灯の煌と合わせると光になる",煌:"星と灯の光。陽と月の晃と合わせると光になる",光:"四つの光がひとつになった字。投げれば大きな傷、闇も晴らす（分ければ四つに戻る）",弱:"敵の文に書くと、攻撃が効かなくなる",冷:"熱いものを冷ます。敵の攻撃が効かなくなる",柔:"硬いものを和らげる",眠:"敵の文に書くと、眠らせる",
   鈍:"敵の文に書くと、刃が鈍って攻撃が効かなくなる",壊:"敵に書けば硬さが壊れ、傷が深くなる。野では木や岩を壊して道を作れる",毒:"敵の文に書くと、毎手すこしずつ弱る",縛:"敵の文に書くと、半分の確率で動けなくなる",
   速:"我の文に書くと、一度に二度斬れる",強:"我の文に書くと、斬る力が増す",盾:"我の文に書くと、受ける傷が減る",癒:"我の文に書くと、毎手心が戻る",
   盲:"敵の文に書くと、目がくらんで攻撃が半分外れる",遅:"敵の文に書くと、一手おきにしか動けない",凍:"敵の文に書くと、二手凍りつく（やがて溶けて水になる）",乱:"敵の文に書くと、混乱して半分は自分を打つ",
@@ -825,7 +834,7 @@ function foeRules(text){
   if(/[弱冷軽柔鈍]/.test(text))dmg=0;
   const broken=text.includes("壊"),sealed=text.includes("封");
   return{invincible:text.includes("無敵"),immortal:text.includes("不死"),hide:!sealed&&(text.includes("飛")||text.includes("見えない")),fly:!sealed&&text.includes("飛"),
-    hard:text.includes("硬")&&!broken,fast:!sealed&&text.includes("速"),sleep:text.includes("眠"),eat:!sealed&&text.includes("喰"),dmg,broken,poison:text.includes("毒"),bind:text.includes("縛"),
+    hard:text.includes("硬")&&!broken,fast:!sealed&&text.includes("速"),sleep:text.includes("眠"),eat:!sealed&&text.includes("喰"),dmg,broken,poison:text.replace(/毒針/g,"").includes("毒"),bind:text.includes("縛"),
     guarded:text.includes("守られ"),steal:text.includes("盗"),call:text.includes("群"),split:text.includes("分か"),rewrite:text.includes("書きかえ"),suck:text.includes("血を吸"),
     blind:text.includes("盲"),slow:text.includes("遅"),frozen:text.includes("凍"),confused:text.includes("乱"),brittle:text.includes("脆"),invis:text.includes("見えない"),text};
 }
@@ -869,7 +878,7 @@ const isRoad=(r,c)=>r%40===20||c%40===20||(c===SOUTH_GATE_C&&r>=SOUTH_GATE_R&&r<
 /* ================= 本島と島々 ================= */
 const TOWER_ISLE={name:"墨竜の島",r:1320,c:1320,rad:32,tower:true};
 const TOWER_GATE=[TOWER_ISLE.r+1,TOWER_ISLE.c];
-const MAIN_C=[500,490],MAIN_R=385,CAP_A=[500,490],CAP_W=0;
+const MAIN_C=[500,490],MAIN_R=440,CAP_A=[500,490],CAP_W=0;
 const wob=(r,c)=>(vnoise(c,r,40,21)-.5)*44+(vnoise(c,r,9,22)-.5)*10;
 function capDist(r,c){const[a0,a1]=CAP_A,vx=MAIN_C[0]-a0,vy=MAIN_C[1]-a1;if(!vx&&!vy)return CAP_W?Math.hypot(r-a0,c-a1):1e9;let t=((r-a0)*vx+(c-a1)*vy)/(vx*vx+vy*vy);t=Math.max(0,Math.min(1,t));return Math.hypot(r-(a0+t*vx),c-(a1+t*vy));}
 function inMain(r,c){const w=wob(r,c);return Math.hypot(r-MAIN_C[0],c-MAIN_C[1])<MAIN_R+w||capDist(r,c)<CAP_W+w*.7;}
@@ -880,7 +889,7 @@ const DOCK_CELLS=new Map(),DOCKS=[];
 function initIslands(){
   ISLANDS.length=0;
   TOWNS.forEach(t=>{const cr=t.r0+19,cc=t.c0+19;if(![[t.r0,t.c0],[t.r0,t.c0+38],[t.r0+38,t.c0],[t.r0+38,t.c0+38],[cr,cc]].every(([a,b])=>inMain(a,b)))ISLANDS.push({name:t.name,r:cr,c:cc,rad:36,town:true});});
-  [["月島",60,900,18],["竹島",330,960,16],["松島",620,975,18],["鬼ヶ島",1000,560,22],["岩島",980,300,16],["小島",640,40,15],["鶴島",900,60,15],["亀島",50,640,15],["夕島",1180,820,20],["霞島",900,1180,22],["星島",420,1230,18],["白島",1260,180,16],["黒島",1130,1120,18],["雁島",1240,520,16],["鷺島",660,1290,16]].forEach(([name,r,c,rad])=>{
+  [["月島",60,900,18],["竹島",330,960,16],["松島",620,975,18],["鬼ヶ島",1000,560,22],["岩島",980,300,16],["小島",1120,90,15],["鶴島",900,60,15],["亀島",40,1060,15],["夕島",1180,820,20],["霞島",900,1180,22],["星島",420,1230,18],["白島",1260,180,16],["黒島",1130,1120,18],["雁島",1240,520,16],["鷺島",660,1290,16]].forEach(([name,r,c,rad])=>{
     if(Math.hypot(r-MAIN_C[0],c-MAIN_C[1])<MAIN_R+rad+30||capDist(r,c)<CAP_W+rad+30)return;
     if(ISLANDS.some(I=>Math.hypot(I.r-r,I.c-c)<I.rad+rad+12))return;
     ISLANDS.push({name,r,c,rad});});
@@ -922,16 +931,18 @@ function biomeAt(r,c){
   if(Math.abs(r-OR-22)+Math.abs(c-OC-12)<60)return 0;
   if([[6,0],[-6,0],[0,6],[0,-6]].some(([a,b])=>!isLand(r+a,c+b)))return BIOME_IX.shore;
   const t=vnoise(c,r,190,41),h=vnoise(c,r,170,42);
-  if(t<.3)return BIOME_IX.snow;
-  if(t>.7)return h<.42?BIOME_IX.sand:h>.62?BIOME_IX.fire:BIOME_IX.flower;
-  if(h>.72)return BIOME_IX.swamp;
-  if(h<.28)return BIOME_IX.bamboo;
+  if(Math.hypot(r-MAIN_C[0],c-MAIN_C[1])>372){const q=vnoise(c,r,110,43);if(q<.4)return BIOME_IX.sand;if(q>.62)return BIOME_IX.fire;if(q<.52)return 0;}
+  if(t<.24)return BIOME_IX.snow;
+  if(t>.62)return h<.48?BIOME_IX.sand:h>.6?BIOME_IX.fire:BIOME_IX.flower;
+  if(h>.8)return BIOME_IX.swamp;
+  if(h<.26)return BIOME_IX.bamboo;
   return 0;
 }
 function placeName(){
   if(S.cur!=="world")return D().name;
   const[r,c]=S.me,st=stampAt(r,c);if(st)return st.name;
   const tw=townAt(r,c);if(tw)return tw.name;
+  {const hs=S.flags.houses||[];for(let n=0;n<hs.length;n++){const H=hs[n],P=PLANS.find(p=>p.k===H.k);if(P&&r>=H.r0-1&&r<=H.r0+3&&c>=H.c0-1&&c<=H.c0+[...P.ext[0]].length)return houseName(n);}}
   const I=inIsland(r,c);if(I)return I.name;
   return BIOMES[biomeAt(r,c)].name;
 }
@@ -1126,29 +1137,48 @@ Object.assign(MOBS,{
 ["熊","鮫","熔","蛟","鵺","狢"].forEach(k=>{MOBS[k].arena=true;});
 MOBS.鮫.lines=["鮫は波に守られる","鮫は速い","鮫の牙は強い"];MOBS.蛟.lines=["蛟は鱗に守られる","蛟は文を書きかえる","蛟は速い","蛟の牙は鋭い"];
 Object.values(MOBS).forEach(m=>{if(m.arena&&!m.open)m.open=`${m.name}が立ちはだかった！　ただの魔物ではない。`;});
-const BIOME_MID={snow:"霙",sand:"獄",fire:"鳳",flower:"妖",swamp:"鯰",bamboo:"篁",shore:"坊"};
-const BIOME_MOBS={snow:["熊","鷲","霜","霜"],sand:["蠍","嵐","蠍"],fire:["熔","燐","霆","燐"],flower:["狐","蝗","蝗"],swamp:["蛙","蛭","泥","茸"],bamboo:["猿","蟻","蟻"],shore:["蟹","鴉","鮫","蟹"]};
-const ISLE_MOBS=["渦","鴉","蟹","渦","鮫"],RARE_MOBS=["狢","蛟","鵺"];
+Object.assign(MOBS,{
+  鮙:{name:"鮙",glyph:"鮙",hp:5,sea:true,lines:["鮙の角は鋭い","鮙の動きは速い"],weapon:"角",exp:4,loot:"鋭",dropRate:.3,zeni:4},
+  鰻:{name:"大鰻",glyph:"鰻",hp:6,sea:true,lines:["大鰻の歯は鋭い","大鰻は血を吸う"],weapon:"歯",exp:4,loot:"吸",dropRate:.3,zeni:4},
+  鱏:{name:"大鱏",glyph:"鱏",hp:6,sea:true,sting:true,lines:["大鱏の動きは速い","大鱏の毒針は鋭い"],weapon:"毒針",exp:5,loot:"毒",dropRate:.3,zeni:5},
+  鯸:{name:"大鯸",glyph:"鯸",hp:6,sea:true,thorn:true,lines:["大鯸は体からとげが生えている","大鯸の針は鋭い"],weapon:"針",exp:5,loot:"返",dropRate:.3,zeni:5},
+  魚:{name:"狼魚",glyph:"魚",hp:5,sea:true,lines:["狼魚の歯は鋭い","狼魚の動きは速い"],weapon:"歯",exp:4,loot:"速",dropRate:.3,zeni:4},
+  蠏:{name:"大蟹",glyph:"蠏",hp:6,sea:true,lines:["大蟹のはさみは鋭い","大蟹の動きは速い"],weapon:"はさみ",exp:5,loot:"盾",dropRate:.3,zeni:5},
+  貝:{name:"大貝",glyph:"貝",hp:7,sea:true,pearl:true,lines:["大貝の歯は鋭い","大貝の殻は硬い"],weapon:"歯",exp:5,loot:"盾",dropRate:.2,zeni:6},
+  蛸:{name:"大蛸",glyph:"蛸",hp:13,arena:true,strong:true,sea:true,lines:["大蛸は我を動けなくする","大蛸は海に潜る"],weapon:"足",exp:12,loot:"縛",dropRate:.8,zeni:30},
+  蟒:{name:"大海蛇",glyph:"蟒",hp:16,arena:true,strong:true,sea:true,rare:true,lines:["大海蛇は海に潜る","大海蛇は波を起こす"],weapon:"牙",exp:16,loot:"命",dropRate:.6,zeni:40},
+  鯨:{name:"鯨竜",glyph:"鯨",hp:13,arena:true,strong:true,sea:true,rare:true,lines:["鯨竜は硬い","鯨竜の歯は鋭い","鯨竜の動きは速い"],weapon:"歯",exp:18,loot:"命",dropRate:.6,zeni:45},
+  溟:{name:"大海神",glyph:"溟",hp:16,arena:true,strong:true,sea:true,rare:true,lines:["大海神は不死","大海神の槍は鋭い","大海神の動きは速い","大海神は潜る"],weapon:"槍",exp:30,loot:"命",dropRate:1,zeni:120},
+  颱:{name:"台風",glyph:"颱",hp:11,arena:true,strong:true,rare:true,lines:["台風は我を吹き飛ばす","台風の風は強い","台風は風に守られる"],weapon:"風",exp:14,loot:"嵐",dropRate:.7,zeni:35},
+  濤:{name:"津波",glyph:"濤",hp:11,arena:true,strong:true,rare:true,lines:["津波は我を動かす","津波は不死","津波は海に守られる"],weapon:"波",exp:14,loot:"水",dropRate:.7,zeni:35},
+});
+MOBS.坊.lines=["海坊主は潜る","海坊主は我を引き寄せる","海坊主は分かれる"];MOBS.坊.sea=true;MOBS.坊.hp=13;MOBS.坊.rare=true;MOBS.鮫.sea=true;
+const BIOME_MID={snow:["霙","熊"],sand:["獄"],fire:["鳳","熔"],flower:["妖"],swamp:["鯰"],bamboo:["篁"],shore:["濤"]};
+const SEA_MOBS=["鮙","鰻","鱏","鯸","魚","蠏","貝"];
+function seaFoe(){if(Math.random()<.05){const p=Math.random();if(S.flags.cleared&&p<.07)return"溟";if(p<.2)return"鯨";if(p<.35)return"蟒";if(p<.5)return"坊";if(p<.68)return"鮫";return"蛸";}return pick(Math.random,SEA_MOBS);}
+const BIOME_MOBS={snow:["鷲","鷲","霜","霜"],sand:["蠍","嵐","蠍"],fire:["燐","燐","霆","燐"],flower:["狐","蝗","蝗"],swamp:["蛙","蛭","泥","茸"],bamboo:["猿","蟻","蟻"],shore:["蟹","鴉","渦","蟹"]};
+const ISLE_MOBS=["渦","鴉","蟹","渦","蟹"],RARE_MOBS=["狢","蛟","鵺"];
 function pickMob(r,c,tier,rnd){
   rnd=rnd||Math.random;
   const I=typeof inIsland==="function"?inIsland(r,c):null;
   if(I&&!I.tower&&!I.town){
-    if(rnd()<.1){const pool=tier>=4?RARE_MOBS:RARE_MOBS.slice(0,2);return pick(rnd,pool);}
+    if(rnd()<.025){const pool=tier>=4?RARE_MOBS:RARE_MOBS.slice(0,2);return pick(rnd,pool);}
     if(rnd()<.6)return pick(rnd,ISLE_MOBS.filter(m=>tier>=2||!MOBS[m].strong));
   }
   const bk=typeof biomeAt==="function"?BIOMES[biomeAt(r,c)].k:"no";
-  if(BIOME_MID[bk]&&tier>=1&&rnd()<.035)return BIOME_MID[bk];
+  const dV=Math.abs(r-OR-22)+Math.abs(c-OC-12);
+  if(dV>=90){if(rnd()<.0015)return"颱";if(BIOME_MID[bk]&&rnd()<.009)return pick(rnd,BIOME_MID[bk]);}
   if(BIOME_MOBS[bk]&&rnd()<.8){const pool=BIOME_MOBS[bk].filter(m=>tier>=2||!MOBS[m].strong);if(pool.length)return pick(rnd,pool);}
   return pick(rnd,tierMobs(tier));
 }
 Object.assign(FOES,MOBS);
 FOES.猪={name:"大猪",glyph:"猪",hp:5,lines:["大猪は硬い","大猪の牙は鋭い"],open:"大猪が地をけって突っこんできた！",weapon:"牙",tutorial:true,raidBoss:true,exp:4};
 const ARENA_FLOOR={虚:["日","月","石","石","冫","令"],冥:["冫","令","冫","令","石","石"],黙:["石","石","石","石","目","民","日","月"],幻:["日","月","火","火","石","石"],龍:["冫","令","日","月","火","火","石","石"],猪:["石","石"],霞:["日","月","石","石"],魔:["冫","令","火","石"],巌:["石","石","目","民"],獏:["目","民","日","月","石"],竜:["冫","令","日","月","火","火"],鬼:["石","石","冫","令"]};
-["熊","鮫","熔","蛟","鵺","狢","霙","獄","鳳","妖","鯰","篁","坊"].forEach(k=>{if(!ARENA_FLOOR[k])ARENA_FLOOR[k]=["石","石","石","木","木","火"];});
-const THROW={石:1,岩:4,火:2,炎:5,木:1,林:2,森:3,明:3,日:1,月:1};
+["熊","鮫","熔","蛟","鵺","狢","霙","獄","鳳","妖","鯰","篁","坊","蛸","蟒","鯨","溟","颱","濤"].forEach(k=>{if(!ARENA_FLOOR[k])ARENA_FLOOR[k]=["石","石","石","木","木","火"];});
+const THROW={石:1,岩:4,火:2,炎:5,木:1,林:2,森:3,明:3,日:1,月:1,晃:3,煌:3,光:8};
 FOES.鬼.still=true;
 const MOB_SET=new Set(Object.keys(MOBS));
-const TIER_MOBS=[["鼠","蝙","蛙","蟻","蝗","狐"],["鼠","蝙","蛇","蛙","蟻","狐","鴉","茸"],["蛇","蜂","蝙","蜘","猿","蟹","鴉","泥"],["蜂","骸","蛇","蠍","霜","泥","蜘","燐"],["狼","骸","霊","霆","嵐","燐","鷲"],["骸","霊","狼","蜂","熊","熔","鮫","霆"],["霊","骸","狼","熊","熔","鮫"]];
+const TIER_MOBS=[["鼠","蝙","蛙","蟻","蝗","狐"],["鼠","蝙","蛇","蛙","蟻","狐","鴉","茸"],["蛇","蜂","蝙","蜘","猿","蟹","鴉","泥"],["蜂","骸","蛇","蠍","霜","泥","蜘","燐"],["狼","骸","霊","霆","嵐","燐","鷲"],["骸","霊","狼","蜂","霆","嵐"],["霊","骸","狼","霆","燐"]];
 const tierMobs=t=>TIER_MOBS[Math.max(0,Math.min(TIER_MOBS.length-1,t))];
 
 /* ================= 迷宮の生成（塔の階・地下） ================= */
@@ -1541,7 +1571,8 @@ function move(dir,repeat){
     if(o===undefined){S.fx.nudge=true;sfx.bump();return false;}
     const z=blockedFor(tr,tc,zs,"me");
     if(z){say(z.z.msg);S.fx.nudge=true;sfx.bump();tip("zone");return false;}
-    if(!o){S.me=[tr,tc];S.fx.walk=true;S.flags.g_walk=(S.flags.g_walk||0)+1;if(S.cur==="world")cnt("walk");if(S.cur==="world"&&tr===SOUTH_GATE_R)tip("world");const zz=zoneAt(tr,tc,zs);(zz&&zz.pass)?sfx.water():sfx.step();return true;}
+    if(!o){if(S.flags.boat&&onWater())say("舟を降りた。");S.me=[tr,tc];S.fx.walk=true;S.flags.g_walk=(S.flags.g_walk||0)+1;if(S.cur==="world")cnt("walk");if(S.cur==="world"&&tr===SOUTH_GATE_R)tip("world");const zz=zoneAt(tr,tc,zs);(zz&&zz.pass)?sfx.water():sfx.step();return true;}
+    if(S.cur==="world"&&o.fixed&&(o.ch==="海"||o.ch==="水")&&S.flags.boat){const was=onWater();S.me=[tr,tc];S.fx.walk=true;sfx.water();if(!was)say("舟で漕ぎ出した。陸に着けば降りる。");return true;}
     if(o.ch==="水"&&o.fixed&&canSwim(zs)){S.me=[tr,tc];S.fx.walk=true;sfx.water();return true;}
     if(o.kind==="stair"){const door=D().doorAt(tr,tc);if(door){sfx.gate();warp(door);return"warp";}}
     if(o.kind==="exit"){const at=BOSS_EXIT[S.cur];if(at){sfx.gate();warp({to:"world",at,face:"down"});return"warp";}}
@@ -1557,7 +1588,8 @@ function move(dir,repeat){
     if(o.kind==="item"||o.kind==="glyph"){S.me=[tr,tc];S.fx.walk=true;setCell(tr,tc,null);pickup(o.ch);return true;}
     if(o.kind==="enemy"||o.kind==="boss"){startBattle(tr,tc,o);return true;}
     if(o.kind==="char"&&!o.fixed)return push(tr,tc,dr,dc,zs);
-    if(o.ch==="水")say("水が深い。泳げれば、渡れるのだが。");
+    if(o.ch==="海")say("海だ。舟があれば渡れる。（［建てる］で木から舟を作れる）");
+    else if(o.ch==="水")say("水が深い。泳げれば、渡れるのだが。");
     else if(S.flags.canTake&&canHarvest(o,tr,tc))say(`${Q(o.ch)}は［取］で切り出せる。（${HARVEST[o.ch].join("")}が手に入る）`);
     S.fx.nudge=true;sfx.bump();return false;
   });
@@ -1590,7 +1622,7 @@ function push(r,c,dr,dc,zs){
   }
   if(chain.length===1&&end.kind==="dark"){
     const a=at(r,c);
-    if(a.ch==="明"){
+    if(a.ch==="明"||a.ch==="光"){
       const d=D();for(let i=0;i<d.rows;i++)for(let j=0;j<d.cols;j++){const x=at(i,j);if(x&&x.kind==="dark")setCell(i,j,null);}
       setCell(r,c,null);S.me=[r,c];sfx.unlock();S.fx.burst={r:nr,c:nc,chars:["明","丶","ノ"],n:12};S.fx.shake=1;
       say(`${Q("明")}の光で、闇がすべて晴れた。`);return true;
@@ -1616,7 +1648,7 @@ function take(){
   if(busy())return;
   if(!S.flags.canTake){say("まだ字を取ることを知らない。村の寺子屋で教わろう。");sfx.bump();renderWorld();return;}
   if(S.hand==="壊")aim(o=>o&&o.kind==="char"&&o.fixed&&BREAKABLE.has(o.ch));
-  else{const[fr,fc]=front(),fo=at(fr,fc);const inMy=S.cur.startsWith("my:");const looseOk=o=>o&&((o.kind==="char"&&!o.fixed)||(inMy&&o.myf&&!S.flags.carry));
+  else{const[fr,fc]=front(),fo=at(fr,fc);const inMy=S.cur.startsWith("my:");const looseOk=o=>o&&((o.kind==="char"&&!o.fixed)||((inMy||o.out)&&o.myf&&!S.flags.carry));
     if(!looseOk(fo)&&!canHarvest(fo,fr,fc)){
       const d=Object.entries(DIRS).find(([,[dr,dc]])=>looseOk(at(S.me[0]+dr,S.me[1]+dc)))||Object.entries(DIRS).find(([,[dr,dc]])=>canHarvest(at(S.me[0]+dr,S.me[1]+dc),S.me[0]+dr,S.me[1]+dc));
       if(d&&!(S.hand&&!fo))S.face=d[0];}}
@@ -1627,25 +1659,27 @@ function take(){
       setCell(r,c,null);S.hand=null;sfx.split();S.fx.burst={r,c,chars:["丶","ノ","一",o.ch],n:10};S.fx.shake=1;say(`${Q("壊")}の字で${Q(o.ch)}を打ちくだいた。道ができた。`);return true;
     }
     if(S.flags.carry){
-      if(!S.cur.startsWith("my:")){sfx.bump();say(`${S.flags.carry.n}は家の中でしか置けない。`);return false;}
+      if(!S.cur.startsWith("my:")&&!(S.cur==="world"&&S.flags.carry.out)){sfx.bump();say(`${S.flags.carry.n}は家の中でしか置けない。`);return false;}
       const C=S.flags.carry,cells=furnSpot({shape:C.shape});
       if(!cells){sfx.bump();say(`となりに${C.n}を置く空きがない。`);return false;}
       const gid=uid++,born=[];
-      cells.forEach(([rr,cc,ch],i)=>{const x=mkObj(ch,!C.pet);x.myf=true;x.fn=C.n;if(C.fk)x.fk=C.fk;if(cells.length>1)x.g=gid;if(C.pet){x.kind="npc";x.fixed=false;}else x.kind="char";if(C.t!=null)x.t=C.t;setCell(rr,cc,x);born.push(x.id);});
+      cells.forEach(([rr,cc,ch],i)=>{const x=mkObj(ch,!C.pet);x.myf=true;x.fn=C.n;if(C.out)x.out=true;if(C.fk)x.fk=C.fk;if(cells.length>1)x.g=gid;if(C.pet){x.kind="npc";x.fixed=false;}else x.kind="char";if(C.t!=null)x.t=C.t;setCell(rr,cc,x);born.push(x.id);});
       S.flags.carry=null;sfx.place();S.fx.born=born;S.fx.burst={r:cells[0][0],c:cells[0][1],chars:["丶","一"],n:6};say(`${C.n}を置いた。`);return true;
     }
-    if(o&&o.myf&&S.cur.startsWith("my:")){
+    if(o&&o.myf&&(S.cur.startsWith("my:")||o.out)){
       if(S.hand){sfx.bump();say("手に字を持っていると、家具は持てない。先に字をしまおう。");return false;}
       const parts=o.g!=null?Object.entries(M().ov).filter(([k,v])=>v&&v.g===o.g).map(([k,v])=>[...k.split(",").map(Number),v]):[[r,c,o]];
       const r0=Math.min(...parts.map(p=>p[0])),c0=Math.min(...parts.map(p=>p[1]));
       parts.forEach(([rr,cc])=>setCell(rr,cc,null));
-      S.flags.carry={n:o.fn||o.ch,fk:o.fk,pet:o.kind==="npc",t:o.t,shape:parts.map(([rr,cc,v])=>[rr-r0,cc-c0,v.ch])};
+      S.flags.carry={n:o.fn||o.ch,fk:o.fk,out:!!o.out,pet:o.kind==="npc",t:o.t,shape:parts.map(([rr,cc,v])=>[rr-r0,cc-c0,v.ch])};
       sfx.take();S.fx.burst={r,c,chars:["、"],n:4};say(`${o.fn||o.ch}を持ち上げた。運んで、［取］でとなりに置ける。`);return true;
     }
     if(canHarvest(o,r,c)){
       const got=HARVEST[o.ch];got.forEach(x=>cnt("cut:"+x));setCell(r,c,null);hero.bag.push(...got);S.fx.bagNew=hero.bag.length-1;
       sfx.split();S.fx.burst={r,c,chars:[...got,"丶","ノ"],n:got.length+5,up:true};S.fx.shake=got.length>1?1:0;
-      say(`${Q(o.ch)}から${got.map(Q).join("")}を切り出した。字袋に入れた。（木${countCh("木")}・石${countCh("石")}）`);tip("chop");return true;
+      say(`${Q(o.ch)}から${got.map(Q).join("")}を切り出した。字袋に入れた。（木${countCh("木")}・石${countCh("石")}）`);tip("chop");
+      if(got.includes("石")&&Math.random()<.07){const m=rollMat();addMat(m);S.fx.burst={r,c,chars:[m,"丶","ノ"],n:6,up:true};say(`石の中から${Q(MAT[m].n)}が出てきた！（兜・鎧の素材。武器の画面から作れる）`);}
+      return true;
     }
     if(!S.hand){
       if(o&&o.kind==="char"&&!o.fixed){S.hand=o.ch;setCell(r,c,null);sfx.take();S.fx.burst={r,c,chars:["、"],n:4};say(`${Q(o.ch)}を手に取った。`);return true;}
@@ -1708,13 +1742,61 @@ function useItem(i,ch){
   pushHist();hero.bag.splice(i,1);
   if(ch==="丹"){const h=hero.max-hero.hp;hero.hp=hero.max;sfx.heal();S.fx.burst={r:S.me[0],c:S.me[1],chars:["心"],n:5,up:true};say(`${Q("丹")}を飲んだ。心が${h}つ戻った。`);renderWorld();return;}
   if(ch==="命"){hero.max+=1;hero.hp+=1;sfx.win();S.fx.burst={r:S.me[0],c:S.me[1],chars:["命","心"],n:2,up:true};say(`${Q("命")}の字が体にしみこんだ。心の最大がひとつ増えた。`);renderWorld();return;}
-  if(ch==="隠"){S.hideUntil=(S.turn||0)+80;sfx.warpOut();say(`${Q("隠")}の字で気配を消した。しばらく敵に見つからない。`);renderWorld();return;}
-  if(ch==="帰"){say(`${Q("帰")}の字が光った。`);sfx.rewrite();warp({to:"world",at:[OR+29,OC+5],face:"down"});return;}
+  if(ch==="隠"){S.hideUntil=(S.turn||0)+80;sfx.warpOut();say(`${Q("隠")}の字で気配を消した。八十歩のあいだ敵に見つからない（我が薄くなっているあいだ有効）。`);renderWorld();return;}
+  if(ch==="帰"){
+    const dests=[{n:"始まりの村（我の家の前）",d:{to:"world",at:[OR+29,OC+5],face:"down"}}];
+    (S.flags.houses||[]).forEach((H,n)=>dests.push({n:houseName(n),d:{to:"world",at:[H.door[0]+1,H.door[1]],face:"down"}}));
+    if(dests.length===1){flyHome(dests[0].d);return;}
+    const d=overlay(`<p class="lead">帰の字</p><p class="sub-note">どこへ帰る？</p><div class="mgrid">${dests.map((x,j)=>`<button class="go sub" data-dst="${j}">${esc(x.n)}</button>`).join("")}</div><button class="go" id="dstno">やめる</button>`);
+    d.querySelectorAll("[data-dst]").forEach(b=>b.onclick=()=>{closeOverlay();flyHome(dests[+b.dataset.dst].d);});
+    $("#dstno").onclick=()=>{closeOverlay();hero.bag.splice(i,0,"帰");if(S.hist)S.hist.pop();renderWorld();};return;}
   if(ch==="跳"){
     const[dr,dc]=DIRS[S.face],r1=S.me[0]+dr,c1=S.me[1]+dc,r2=r1+dr,c2=c1+dc,zs=zoneState();
     if(at(r2,c2)===null&&!blockedFor(r2,c2,zs,"me")&&at(r1,c1)!==undefined){S.me=[r2,c2];sfx.gate();S.fx.walk=true;S.fx.burst={r:r1,c:c1,chars:["跳"],n:1,up:true};say(`${Q("跳")}の字で、ひと跳びに越えた。`);endTurn();return;}
     hero.bag.splice(i,0,ch);S.hist.pop();sfx.bump();say("跳んだ先に降りる場所がない。向きを変えてから使おう。");renderWorld();return;
   }
+}
+/* ================= 兜・鎧と素材 ================= */
+const MATS=[
+  {k:"曜",n:"黒曜石",w:8,h:"鋭さ：力＋1",a:"硬さ：受ける傷−1"},
+  {k:"晶",n:"水晶",w:7,h:"戦いで、弱点の字（守・不・無・見・飛・硬）が光る",a:"受けた傷の四分の一を敵に返す"},
+  {k:"金",n:"金",w:5,h:"手に入る銭が一・五倍",a:"番人・中ボスとの戦いの始めに心が二つ戻る"},
+  {k:"銀",n:"銀",w:6,h:"分身の本物が見分けられる",a:"不死の敵にも、斬るたびに傷が1残る"},
+  {k:"鉄",n:"鉄",w:14,h:"落石・地響きの傷が半分",a:"受ける傷−1"},
+  {k:"鉛",n:"方鉛鉱",w:6,h:"字を盗まれない",a:"受ける傷−2。ただし重く、時々足が止まる"},
+  {k:"輝",n:"輝安鉱",w:5,h:"斬ると毒がまわる（三度、1の傷）",a:"毒針の毒が効かない"},
+  {k:"蛍",n:"蛍石",w:6,h:"吹雪の中でも予告がはっきり見える",a:"幻の床が見える"},
+  {k:"紫",n:"紫水晶",w:5,h:"我の文を書き消されない",a:"薬で戻る心が一つ増える"},
+  {k:"紅",n:"紅玉",w:3,h:"火・炎を投げたときの傷＋2",a:"燃える床が効かない"},
+  {k:"青",n:"青玉",w:3,h:"海の敵に力＋2",a:"水・泥の床で足を取られない"},
+  {k:"翠",n:"翠玉",w:3,h:"十歩ごとに心がひとつ戻る",a:"蔦の床で足を取られない"},
+  {k:"解",n:"方解石",w:7,h:"敵の書きもどしを半分ふせぐ",a:"氷の床で滑らない"},
+  {k:"珠",n:"真珠",w:0,h:"海の敵に力＋2",a:"海で敵に出会いにくい"},
+  {k:"剛",n:"金剛石",w:.4,h:"力＋3。硬い敵にも傷が入る",a:"受ける傷−2。傷の四分の一を返す"},
+];
+const MAT=Object.fromEntries(MATS.map(m=>[m.k,m]));
+const gearOn=(slot,k)=>!!(typeof hero!=="undefined"&&hero&&hero.gear&&hero.gear[slot]===k);
+const gearGuard=()=>({曜:1,鉄:1,鉛:2,剛:2})[(hero&&hero.gear||{}).armor]||0;
+const gearAtk=()=>{const g=(hero&&hero.gear||{}).helm;return(g==="曜"?1:g==="剛"?3:0)+((g==="青"||g==="珠")&&B&&B.f&&B.f.sea?2:0);};
+const gearReflect=dm=>(gearOn("armor","晶")||gearOn("armor","剛"))&&dm>0?Math.max(1,Math.floor(dm/4)):0;
+function addMat(k){hero.mats=hero.mats||{};hero.mats[k]=(hero.mats[k]||0)+1;}
+function rollMat(){const pool=MATS.filter(m=>m.w>0),tot=pool.reduce((s,m)=>s+m.w,0);let x=Math.random()*tot;for(const m of pool){x-=m.w;if(x<=0)return m.k;}return"鉄";}
+function openArmory(){
+  if(!S||B||lock)return;
+  hero.mats=hero.mats||{};hero.gear=hero.gear||{helm:null,armor:null};
+  const cur=(slot,lbl)=>{const k=hero.gear[slot],m=MAT[k];return`<div class="eqslot"><span class="lbl">${lbl}</span>${m?`<b>${slot==="helm"?"兜":"鎧"}</b><span>${m.n}の${lbl}<br><small>${slot==="helm"?m.h:m.a}</small></span>`:`<span class="lbl">（なし）</span>`}</div>`;};
+  const have=MATS.filter(m=>hero.mats[m.k]>0);
+  const rows=have.map(m=>`<div class="bagrow"><b>${m.k}</b><span><em>${m.n}</em><small>×${hero.mats[m.k]}</small><br><small>兜：${m.h}<br>鎧：${m.a}</small></span><span class="eqbtns"><button data-mk="helm" data-m="${m.k}" ${hero.zeni>=20?"":"disabled"}>兜 銭20</button><button data-mk="armor" data-m="${m.k}" ${hero.zeni>=30?"":"disabled"}>鎧 銭30</button></span></div>`).join("");
+  const d=overlay(`<p class="lead">兜・鎧</p><p class="sub-note">素材を一つと銭で、兜か鎧を作る。素材ごとに効き目が違う。作り直すと前のものは消える。<br>素材は石・岩・山を［取］で割ると、まれに出る（真珠は大貝が落とす）。</p>
+    <div class="shop">${cur("helm","兜")}${cur("armor","鎧")}<p class="sub-note">持っている素材</p>${rows||'<p class="sub-note">まだ素材がない。</p>'}</div><button class="go" id="armclose">閉じる</button>`);
+  d.classList.add("bagov");
+  d.querySelectorAll("[data-mk]").forEach(b=>b.onclick=()=>{const slot=b.dataset.mk,k=b.dataset.m,cost=slot==="helm"?20:30;if(hero.zeni<cost||!(hero.mats[k]>0))return;hero.zeni-=cost;hero.mats[k]--;hero.gear[slot]=k;sfx.combine();say(`${MAT[k].n}の${slot==="helm"?"兜":"鎧"}を作った。`);saveGame();openArmory();});
+  $("#armclose").onclick=()=>{closeOverlay();renderWorld();};
+}
+function flyHome(dst){
+  say(`${Q("帰")}の字が光った。体が、ふわりと浮きあがる……`);sfx.rewrite();renderWorld();
+  const me=document.querySelector('#layer [data-k="me"]');if(me){me.classList.add("flyup");const L=$("#layer");if(L)particles(L,VIEW.cs,{r:S.me[0],c:S.me[1],chars:["帰","丶","、"],n:8,up:true});}
+  lock=true;setTimeout(()=>{lock=false;warp(dst);},700);
 }
 /* ================= 字袋の画面 ================= */
 const SELF_CH=new Set(["速","強","盾","癒","鋭","避","返","吸","勇","硬","飛"]);
@@ -1887,7 +1969,7 @@ const FURN_PLANS=[
   {ch:"炉",n:"炉",cat:"use",cost:12,info:"木の字を二つくべると、薬をひとつ煎じる"},
   {ch:"釜",n:"釜",cat:"use",cost:15,info:"薬を三つ煮つめて、丹（心が全部戻る）をひとつ練る"},
   {ch:"井",n:"井戸",cat:"use",cost:12,info:"二十歩ごとに［水］の字をくめる"},
-  {ch:"畑",n:"畑",cat:"use",cost:10,info:"三十歩ごとに、木・石・薬・花のどれかが採れる"},
+  {ch:"畑",n:"畑",cat:"use",cost:10,out:true,info:"三十歩ごとに、木・石・薬・花のどれかが採れる（外にも置ける）"},
   {ch:"砥",n:"砥石",cat:"use",cost:20,info:"ぶつかると、鍛冶場と同じく武器を研げる"},
   {ch:"机",n:"書机",cat:"use",cost:5,info:"日記を書く（旅を記録する）"},
   {ch:"鏡",n:"鏡",cat:"use",cost:8,info:"我の姿をうつす（段・心・力を見る）"},
@@ -1909,14 +1991,14 @@ const FURN_PLANS=[
   {ch:"障",n:"障子",cat:"wall",cost:3,info:"通りぬけられる仕切り。通ると、うしろで閉まる"},
   {ch:"柱",n:"柱",cat:"wall",cost:3,info:"柱"},
   {ch:"窓",n:"窓",cat:"wall",cost:3,info:"窓"},
-  {ch:"寝",n:"寝台",cat:"use",cost:25,fk:"床",shape:[[0,0,"寝"],[0,1,"台"]],info:"二マスの寝台。休むと心が全部戻る"},
+  {ch:"寝",n:"寝台",cat:"use",cost:25,fk:"床",shape:[[0,0,"寝"],[0,1,"台"]],info:"二マスの寝台。心が全部戻り、しばらく心の戻りが三倍速い"},
   {ch:"箪",n:"箪笥",cat:"use",cost:25,fk:"倉",shape:[[0,0,"箪"],[0,1,"笥"]],info:"倉とつながった箪笥。字をしまえる"},
-  {ch:"囲",n:"囲炉裏",cat:"use",cost:30,fk:"炉",shape:[[0,0,"囲"],[0,1,"炉"],[1,0,"裏"],[1,1,"灰"]],info:"四マスの囲炉裏。木二つで薬を煎じる"},
-  {ch:"竈",n:"竈",cat:"use",cost:25,fk:"釜",shape:[[0,0,"竈"],[0,1,"火"]],info:"かまど。薬三つで丹を練る"},
+  {ch:"囲",n:"囲炉裏",cat:"use",cost:30,fk:"炉",shape:[[0,0,"囲"],[0,1,"炉"],[1,0,"裏"],[1,1,"灰"]],info:"四マスの囲炉裏。木三つで薬を二つ煎じ、火にあたると心がひとつ戻る"},
+  {ch:"竈",n:"竈",cat:"use",cost:25,fk:"釜",shape:[[0,0,"竈"],[0,1,"火"]],info:"かまど。木一つと薬二つで丹を炊く（釜より薬が少なくてすむ）"},
   {ch:"風",n:"風呂",cat:"use",cost:40,fk:"湯",shape:[[0,0,"風"],[0,1,"呂"],[1,0,"湯"],[1,1,"桶"]],info:"湯につかると心が全部戻り、しばらく敵に見つからない"},
   {ch:"時",n:"柱時計",cat:"use",cost:15,fk:"時",shape:[[0,0,"時"],[1,0,"計"]],info:"縦長の時計。いまの歩数を教えてくれる"},
-  {ch:"姿",n:"姿見",cat:"use",cost:12,fk:"鏡",shape:[[0,0,"姿"],[1,0,"見"]],info:"縦長の鏡。我の段・心・力をうつす"},
-  {ch:"兜",n:"鎧櫃",cat:"use",cost:20,fk:"鎧",shape:[[0,0,"兜"],[1,0,"鎧"]],info:"ぶつかると、武器を持ち替えられる"},
+  {ch:"姿",n:"姿見",cat:"use",cost:12,fk:"鏡",shape:[[0,0,"姿"],[1,0,"見"]],info:"縦長の鏡。兜・鎧と素材をうつす"},
+  {ch:"兜",n:"鎧櫃",cat:"use",cost:20,fk:"鎧",shape:[[0,0,"兜"],[1,0,"鎧"]],info:"素材から兜・鎧を作る"},
   {ch:"仏",n:"仏壇",cat:"use",cost:20,fk:"仏",shape:[[0,0,"仏"],[0,1,"壇"]],info:"手を合わせると心がひとつ戻る（三十歩に一度）"},
   {ch:"鼓",n:"太鼓",cat:"use",cost:10,fk:"鼓",info:"ドン、と打ち鳴らす"},
   {ch:"笛",n:"笛",cat:"use",cost:6,fk:"笛",info:"ひと節吹く"},
@@ -1927,8 +2009,8 @@ const FURN_PLANS=[
   {ch:"長",n:"長椅子",cat:"deco",cost:10,shape:[[0,0,"長"],[0,1,"椅"]],info:"二マスの長椅子"},
   {ch:"掛",n:"掛軸",cat:"deco",cost:8,shape:[[0,0,"掛"],[1,0,"軸"]],info:"縦長の掛軸"},
   {ch:"燈",n:"燈籠",cat:"deco",cost:10,shape:[[0,0,"燈"],[1,0,"籠"]],info:"縦長の燈籠"},
-  {ch:"池",n:"池",cat:"deco",cost:30,shape:[[0,0,"池"],[0,1,"鯉"],[1,0,"波"],[1,1,"池"]],info:"四マスの池。鯉が泳ぐ"},
-  {ch:"庭",n:"庭",cat:"deco",cost:25,shape:[[0,0,"庭"],[0,1,"松"],[1,0,"石"],[1,1,"苔"]],info:"四マスの小さな庭"},
+  {ch:"池",n:"池",cat:"deco",cost:30,shape:[[0,0,"池"],[0,1,"鯉"],[1,0,"波"],[1,1,"池"]],out:true,info:"四マスの池。鯉が泳ぐ（外にも置ける）"},
+  {ch:"庭",n:"庭",cat:"deco",cost:25,shape:[[0,0,"庭"],[0,1,"松"],[1,0,"石"],[1,1,"苔"]],out:true,info:"四マスの小さな庭（外にも置ける）"},
   {ch:"猫",n:"猫",cat:"pet",cost:30,pet:true,info:"家の中を歩きまわる。話しかけられる"},
   {ch:"犬",n:"犬",cat:"pet",cost:30,pet:true,info:"家の中を歩きまわる。よく吠える"},
   {ch:"鶏",n:"鶏",cat:"pet",cost:20,pet:true,info:"ときどき鳴く"},
@@ -1940,7 +2022,14 @@ let FURN_TAB="use";
 const HARVEST={木:["木"],林:["木","木"],森:["木","木","木"],竹:["木"],松:["木"],桜:["木","花"],枯:["木"],葦:["木"],石:["石"],岩:["石","石"],山:["石"],礎:["石","石"],氷:["水"]};
 const canHarvest=(o,r,c)=>!!(o&&o.kind==="char"&&o.fixed&&HARVEST[o.ch]&&S.cur==="world"&&!stampAt(r,c)&&!townAt(r,c));
 const canBuild=()=>S&&S.flags.raid==="done";
-const houseName=(n)=>{const H=S.flags.houses[n];const P=PLANS.find(p=>p.k===H.k);return`我の${P.n}${S.flags.houses.length>1?"（"+KNUM(n+1)+"）":""}`;};
+const houseName=(n)=>{const H=S.flags.houses[n];if(H.name)return H.name;const P=PLANS.find(p=>p.k===H.k);return`我の${P.n}${S.flags.houses.length>1?"（"+KNUM(n+1)+"）":""}`;};
+function nameHouse(n){
+  const H=S.flags.houses[n];if(!H)return;const P=PLANS.find(p=>p.k===H.k);
+  const d=overlay(`<p class="lead">名前を付ける</p><p class="sub-note">この${P.n}の名前（地名に出る）。空のままなら「${esc(houseName(n))}」。</p><input id="hname" maxlength="10" value="${esc(H.name||"")}" placeholder="たとえば　月見の庵" style="font:inherit;font-size:1.2em;width:100%;padding:.4em;box-sizing:border-box;margin:.5em 0"><button class="go" id="hnok">決める</button>`);
+  const inp=$("#hname");setTimeout(()=>{try{inp.focus();}catch(x){}},60);
+  const ok=()=>{const v=inp.value.trim().slice(0,10);H.name=v||null;closeOverlay();saveGame();say(`この${P.n}を「${houseName(n)}」と名付けた。`);renderWorld();};
+  $("#hnok").onclick=ok;inp.onkeydown=e=>{e.stopPropagation();if(e.key==="Enter")ok();};
+}
 function myHouseDef(id){
   const parts=id.split(":"),n=+parts[1],f=+(parts[2]||1),H=(S.flags.houses||[])[n]||{k:"s",door:[0,0]},P=PLANS.find(p=>p.k===H.k)||PLANS[0];
   const R=P.ih,C=P.iw,mid=Math.floor(C/2),floors=P.floors||1,base="my:"+n;
@@ -2038,6 +2127,14 @@ function openBuild(refresh){
     return`<div class="bagrow plan"><b class="ext">${P.ext.map(r=>`<span>${r}</span>`).join("")}</b><span><em>${P.n}</em><small class="tot">銭${c.total}${site.clear&&site.clear.length?"・切り開く":""}</small>${P.info}<br><small>木${P.wood}・石${P.stone}・銭${P.zeni}　いま：木${c.w}${P.wood>c.w?`（−${P.wood-c.w}）`:""}・石${c.st}${P.stone>c.st?`（−${P.stone-c.st}）`:""}・銭${c.total}${c.extra?`（不足分${c.extra}込み）`:""}</small>${site.err?`<br><small class="err">${site.err}</small>`:(site.moved?`<br><small>${site.moved}歩先の場所に建てる</small>`:"")+(site.clear.length?`<br><small>${site.clear.length}か所を切り開く（木＋${g.木}・石＋${g.石}）</small>`:"")}</span><button data-plan="${i}" ${ok?"":"disabled"}>建てる</button></div>`;}).join("");
   const p=panel(`${phead("家を建てる")}<p class="pnote">我の真上に門が来るように建つ。歩きながら場所を選べる。<br>銭${hero.zeni}・木${countCh("木")}・石${countCh("石")}　<small>木は木・林・森、石は山・岩・礎から［取］</small></p><div class="bagbox">${rows}</div>`);
   p.querySelectorAll("[data-plan]").forEach(b=>b.onclick=()=>buildHouse(PLANS[+b.dataset.plan]));
+  {const box=p.querySelector(".bagbox")||p;const wNeed=Math.max(0,6-countCh("木")),bz=wNeed*5;
+   const outs=FURN_PLANS.filter(F=>F.out);
+   box.insertAdjacentHTML("beforeend",(S.flags.boat?'<div class="bagrow plan"><b>舟</b><span><em>舟</em>持っている。海や川に向かって進むと漕ぎ出せる。陸に着けば降りる。</span></div>':`<div class="bagrow plan"><b>舟</b><span><em>舟</em><small class="tot">木6${bz?`（足りない分 銭${bz}）`:""}</small>海や川を渡れる舟。作れば、水に向かって進むだけで漕ぎ出せる。</span><button id="mkboat" ${hero.zeni>=bz?"":"disabled"}>作る</button></div>`)
+     +outs.map(F=>{const sp=furnSpot(F);return`<div class="bagrow">${furnGlyph(F)}<span><em>${F.n}（外）</em>${F.info}${sp?"":'<br><small class="err">向いている先に空きがない</small>'}</span><button data-of="${FURN_PLANS.indexOf(F)}" ${sp&&hero.zeni>=F.cost?"":"disabled"}>置く 銭${F.cost}</button></div>`;}).join(""));
+   const mb=p.querySelector("#mkboat");if(mb)mb.onclick=()=>{const h=Math.min(6,countCh("木"));if(hero.zeni<(6-h)*5)return;pushHist();for(let i=0;i<h;i++)hero.bag.splice(hero.bag.indexOf("木"),1);hero.zeni-=(6-h)*5;S.flags.boat=true;sfx.combine();S.fx.burst={r:S.me[0],c:S.me[1],chars:["舟","木","丶"],n:6,up:true};say("舟を作った！　海や川に向かって進むと、舟で漕ぎ出せる。");saveGame();renderWorld();openBuild(true);};
+   p.querySelectorAll("[data-of]").forEach(b=>b.onclick=()=>{const F=FURN_PLANS[+b.dataset.of],cells=furnSpot(F);if(!cells||hero.zeni<F.cost)return;pushHist();hero.zeni-=F.cost;const gid=uid++,born=[];
+     cells.forEach(([r,c,ch])=>{const x=mkObj(ch,true);x.myf=true;x.out=true;x.fn=F.n;x.kind="char";if(cells.length>1)x.g=gid;if(F.ch==="畑")x.t=S.turn||0;setCell(r,c,x);born.push(x.id);});
+     sfx.place();S.fx.born=born;say(`${F.n}を外に置いた。［取］で持ち上げて動かせる。`);saveGame();renderWorld();openBuild(true);});}
 }
 function buildHouse(P){
   const site=siteFor(P);if(site.err)return;const c=planCost(P,site);if(hero.zeni<c.total)return;
@@ -2054,14 +2151,14 @@ function buildHouse(P){
   P.ext.forEach((row,ri)=>[...row].forEach((ch,ci)=>{const r=site.r0+ri,cc=site.c0+ci;const o=mkObj(ch,ch!=="門");if(ch==="門")o.house=n;setCell(r,cc,o);}));
   sfx.combine();S.fx.shake=1;S.fx.burst={r:site.r0+1,c:site.c0+site.half,chars:["木","石","丶","一"],n:14};
   S.fx.born=P.ext.flatMap((row,ri)=>[...row].map((_,ci)=>at(site.r0+ri,site.c0+ci).id));
-  say(`${houseName(n)}が建った！　門を押して中に入ろう。`);saveGame();renderWorld();
+  say(`${houseName(n)}が建った！　門を押して中に入ろう。`);saveGame();renderWorld();setTimeout(()=>nameHouse(n),400);
 }
 const shapeOf=F=>F.shape||[[0,0,F.ch]];
 const WALK_FURN=new Set(["畳","障"]);
 function furnSpot(F){
   const L=D(),sh=shapeOf(F);
-  const okAt=(r,c)=>r>0&&c>0&&r<L.rows-1&&c<L.cols-1&&at(r,c)===null&&!(r===S.me[0]&&c===S.me[1])&&!(L.keep||[]).some(([a,b])=>a===r&&b===c);
-  const order=[S.face,...["up","right","down","left"].filter(d=>d!==S.face)].map(d=>[S.me[0]+DIRS[d][0],S.me[1]+DIRS[d][1]]);
+  const okAt=(r,c)=>r>0&&c>0&&r<L.rows-1&&c<L.cols-1&&at(r,c)===null&&!(r===S.me[0]&&c===S.me[1])&&!(L.keep||[]).some(([a,b])=>a===r&&b===c)&&!(S.cur==="world"&&(stampAt(r,c)||townAt(r,c)));
+  const order=[S.face].map(d=>[S.me[0]+DIRS[d][0],S.me[1]+DIRS[d][1]]);
   for(const[ar,ac]of order)for(const[sr,sc]of sh){const r0=ar-sr,c0=ac-sc,cells=sh.map(([dr,dc,ch])=>[r0+dr,c0+dc,ch]);if(cells.every(([r,c])=>okAt(r,c)))return cells;}
   return null;
 }
@@ -2074,13 +2171,15 @@ function openFurnish(){
   const list=FURN_PLANS.filter(F=>F.cat===FURN_TAB);
   const tabs=`<div class="bagtabs">${FURN_CATS.map(([k,t])=>`<button data-ftab="${k}" class="${FURN_TAB===k?"on":""}">${t}</button>`).join("")}</div>`;
   const rows=list.map(F=>{const spot=furnSpot(F),sz=shapeOf(F).length>1?`<small class="sz">${Math.max(...shapeOf(F).map(x=>x[0]))+1}×${Math.max(...shapeOf(F).map(x=>x[1]))+1}</small>`:"";
-    return`<div class="bagrow">${furnGlyph(F)}<span><em>${F.n}</em>${sz}${F.info}${spot?"":`<br><small class="err">となりに${shapeOf(F).length>1?"この大きさの":""}空きがない</small>`}</span><button data-f="${FURN_PLANS.indexOf(F)}" ${spot&&hero.zeni>=F.cost?"":"disabled"}>置く ${F.cost}銭</button></div>`;}).join("");
-  const p=panel(`${phead("家具を置く")}<p class="pnote">我のとなりの空いたところに置く。歩きながら続けて置ける。置いた家具は［取］で持ち上げて動かせる。銭${hero.zeni}</p>
+    return`<div class="bagrow">${furnGlyph(F)}<span><em>${F.n}</em>${sz}${F.info}${spot?"":`<br><small class="err">向いている先に${shapeOf(F).length>1?"この大きさの":""}空きがない</small>`}</span><button data-f="${FURN_PLANS.indexOf(F)}" ${spot&&hero.zeni>=F.cost?"":"disabled"}>置く ${F.cost}銭</button></div>`;}).join("");
+  const hn=+S.cur.split(":")[1];
+  const p=panel(`${phead("家具を置く")}<button class="go sub small" id="hren">この家の名前を変える（いま：${houseName(hn)}）</button><p class="pnote">我が向いている先の空いたところに置く。歩きながら続けて置ける。置いた家具は［取］で持ち上げて動かせる。銭${hero.zeni}</p>
     ${o?`<button class="go sub small" id="fdel">となりの［${o.fn||o.ch}］を片づける</button>`:""}${tabs}<div class="bagbox">${rows}</div>`);
   p.querySelectorAll("[data-ftab]").forEach(b=>b.onclick=()=>{FURN_TAB=b.dataset.ftab;sfx.take();openFurnish();});
+  {const hb=p.querySelector("#hren");if(hb)hb.onclick=()=>{closePanel();nameHouse(hn);};}
   p.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{if(S.flags.carry){say(`いまは${S.flags.carry.n}を運んでいる。先に［取］で置こう。`);renderWorld();return;}const F=FURN_PLANS[+b.dataset.f],cells=furnSpot(F);if(!cells||hero.zeni<F.cost)return;pushHist();hero.zeni-=F.cost;
     const gid=uid++,born=[];
-    cells.forEach(([r,c,ch])=>{const x=mkObj(ch,!F.pet);x.myf=true;x.fn=F.n;if(F.fk)x.fk=F.fk;if(cells.length>1)x.g=gid;if(F.pet){x.kind="npc";x.fixed=false;}else x.kind="char";if(F.ch==="畑")x.t=S.turn||0;setCell(r,c,x);born.push(x.id);});
+    cells.forEach(([r,c,ch])=>{const x=mkObj(ch,!F.pet);x.myf=true;x.fn=F.n;if(F.out&&S.cur==="world")x.out=true;if(F.fk)x.fk=F.fk;if(cells.length>1)x.g=gid;if(F.pet){x.kind="npc";x.fixed=false;}else x.kind="char";if(F.ch==="畑")x.t=S.turn||0;setCell(r,c,x);born.push(x.id);});
     cnt("furn");sfx.place();S.fx.born=born;S.fx.burst={r:cells[0][0],c:cells[0][1],chars:["丶","一"],n:6};say(`${F.n}を置いた。${F.cat==="use"?"ぶつかると使える。":""}`);saveGame();renderWorld();});
   const del=$("#fdel");if(del)del.onclick=()=>{pushHist();const F=FURN_PLANS.find(f=>f.n===o.fn)||FURN_PLANS.find(f=>f.ch===o.ch);
     if(o.g!=null){for(const[k,v]of Object.entries(M().ov))if(v&&v.g===o.g)M().ov[k]=null;}else setCell(adj[0],adj[1],null);
@@ -2088,6 +2187,13 @@ function openFurnish(){
 }
 function useFurniture(o){
   const k=o.fk||o.ch;
+  if(o.fn==="鎧櫃"){openArmory();return;}
+  if(k==="床"&&o.fn==="寝台"){talk([["","寝台で、ぐっすり眠った。"],["","……体の芯まで休まった。"]],()=>{hero.hp=hero.max;S.flags.restUntil=(S.turn||0)+60;sfx.heal();S.fx.burst={r:S.me[0],c:S.me[1],chars:["心"],n:5,up:true};say("心がすべて戻った。しばらく（六十歩）心の戻りが三倍速い。");saveGame();renderWorld();});return;}
+  if(k==="炉"&&o.fn==="囲炉裏"){if(countCh("木")<3){say(`囲炉裏には${Q("木")}を三つくべる。いま木は${countCh("木")}つ。`);sfx.bump();return;}
+    for(let j=0;j<3;j++)hero.bag.splice(hero.bag.indexOf("木"),1);hero.bag.push("薬","薬");if(hero.hp<hero.max)hero.hp++;sfx.heal();S.fx.burst={r:S.me[0],c:S.me[1],chars:["薬","薬","心"],n:3,up:true};say(`囲炉裏に木を三つくべた。${Q("薬")}を二つ煎じ、火にあたって心がひとつ戻った。`);saveGame();renderWorld();return;}
+  if(k==="釜"&&o.fn==="竈"){if(countCh("薬")<2||countCh("木")<1){say(`竈で${Q("丹")}を炊くには、木が一つと薬が二つ要る。いま木${countCh("木")}・薬${countCh("薬")}。`);sfx.bump();return;}
+    hero.bag.splice(hero.bag.indexOf("木"),1);for(let j=0;j<2;j++)hero.bag.splice(hero.bag.indexOf("薬"),1);hero.bag.push("丹");sfx.combine();S.fx.burst={r:S.me[0],c:S.me[1],chars:["丹"],n:1,up:true};say(`竈で木を燃やし、薬二つから${Q("丹")}を炊きあげた。`);saveGame();return;}
+  if(k==="鏡"&&o.fn==="姿見"){const g=hero.gear||{},ms=MATS.filter(m=>(hero.mats||{})[m.k]>0).map(m=>m.n+"×"+hero.mats[m.k]).join("・")||"なし";say(`姿見に我の全身がうつる。兜：${MAT[g.helm]?MAT[g.helm].n+"（"+MAT[g.helm].h+"）":"なし"}。鎧：${MAT[g.armor]?MAT[g.armor].n+"（"+MAT[g.armor].a+"）":"なし"}。素材：${ms}。`);return;}
   if(k==="床"){talk([["","寝床で、ひと眠りした。"],["","……よく眠った。からだが軽い。"]],()=>{hero.hp=hero.max;sfx.heal();S.fx.burst={r:S.me[0],c:S.me[1],chars:["心"],n:5,up:true};say("心がすべて戻った。");saveGame();renderWorld();});return;}
   if(k==="倉"||k==="箱"){openStore();return;}
   const t=S.turn||0;
@@ -2104,7 +2210,7 @@ function useFurniture(o){
   if(k==="琴"){[523,587,659,784,880,784,659].forEach((f,i)=>tone(f,.5,"triangle",.05,i*.18));say("琴をひと節かなでた。");return;}
   if(k==="湯"){talk([["","湯につかった。……ああ、極楽。"]],()=>{hero.hp=hero.max;S.hideUntil=(S.turn||0)+40;sfx.water();sfx.heal();S.fx.burst={r:S.me[0],c:S.me[1],chars:["心","湯"],n:5,up:true};say("心がすべて戻った。湯気で気配が消えた（しばらく敵に見つからない）。");saveGame();renderWorld();});return;}
   if(k==="時"){say(`柱時計：いま${t}歩目。${t%6===0?"心がひとつ戻る頃合いだ。":""}`);tone(880,.15,"sine",.05);tone(660,.2,"sine",.05,.2);return;}
-  if(k==="鎧"){openEquip();return;}
+  if(k==="鎧"){openArmory();return;}
   if(k==="仏"){const left=30-(t-(o.t??-99));if(left>0){say(`静かに手を合わせた。（あと${left}歩でまた心が戻る）`);return;}o.t=t;if(hero.hp<hero.max)hero.hp++;sfx.heal();say("手を合わせた。心がひとつ戻った。");return;}
   if(k==="鼓"){tone(70,.5,"sine",.15);noise(.2,.08,200,1);say("ドン！　太鼓が鳴った。");return;}
   if(k==="笛"){[784,880,988,1175,988,880].forEach((f,i)=>tone(f,.3,"sine",.04,i*.16));say("笛をひと節吹いた。");return;}
@@ -2222,6 +2328,7 @@ function openEquip(){
   d.querySelectorAll("[data-un]").forEach(b=>b.onclick=()=>{const k=+b.dataset.un;hero.bag.push(hero.eq[k]);hero.eq[k]=null;sfx.place();openEquip();});
   d.querySelectorAll("[data-eq]").forEach(b=>b.onclick=()=>{const i=+b.dataset.eq,k=+b.dataset.k,ch=hero.bag[i];hero.bag.splice(i,1);equipWeapon(ch,k);sfx.take();openEquip();});
   d.querySelector("#eqclose").onclick=()=>{closeOverlay();saveGame();renderWorld();};
+  {const g=hero.gear||{},t=`兜：${MAT[g.helm]?MAT[g.helm].n:"なし"}　鎧：${MAT[g.armor]?MAT[g.armor].n:"なし"}`;const bt=document.createElement("button");bt.className="go sub";bt.textContent=`兜・鎧を作る（${t}）`;bt.onclick=()=>{closeOverlay();openArmory();};d.querySelector("#eqclose").before(bt);}
 }
 function stowHand(){
   if(busy())return;
@@ -2331,6 +2438,10 @@ function meetNpc(r,c,o){
   }
   talk(v);
 }
+let MOB_T=0;
+const onWater=()=>{const o=S.cur==="world"&&at(S.me[0],S.me[1]);return!!(o&&o.fixed&&(o.ch==="海"||o.ch==="水"));};
+const onSea=()=>{const o=S.cur==="world"&&at(S.me[0],S.me[1]);return!!(o&&o.fixed&&o.ch==="海");};
+function adjFoe(){if(S.hideUntil>(S.turn||0))return null;for(const[a,b]of Object.values(DIRS)){const r=S.me[0]+a,c=S.me[1]+b,o=at(r,c);if(o&&o.kind==="enemy"&&!(o.stun>0)&&!(FOES[o.ch]||{}).still)return[r,c,o];}return null;}
 function moveMobs(stamp){
   stamp=stamp||("t"+S.turn);
   const d=D(),[pr,pc]=S.me,R=9,zs=zoneState();
@@ -2346,10 +2457,18 @@ function moveMobs(stamp){
       const dist=Math.abs(r-pr)+Math.abs(c-pc);
       if(o.stun>0){const x=touch(r,c);x.stun--;continue;}
       if(dist===1&&!(S.hideUntil>(S.turn||0))){foe=foe||[r,c,o];continue;}
-      let steps=[];
-      if(dist<=6&&!(S.hideUntil>(S.turn||0))){if(r!==pr)steps.push([Math.sign(pr-r),0]);if(c!==pc)steps.push([0,Math.sign(pc-c)]);if(Math.abs(c-pc)>Math.abs(r-pr))steps.reverse();}
-      else if(Math.random()<.4)steps=[Object.values(DIRS)[Math.floor(Math.random()*4)]];
-      for(const[dr,dc]of steps){const nr=r+dr,nc=c+dc;if(okCell(nr,nc)){o.moved=stamp;setCell(nr,nc,o);setCell(r,c,null);if(Math.abs(nr-pr)+Math.abs(nc-pc)===1)foe=foe||[nr,nc,o];break;}}
+      const hid=S.hideUntil>(S.turn||0),chase=dist<=6&&!hid;
+      const toward=(r,c)=>{const st=[];if(r!==pr)st.push([Math.sign(pr-r),0]);if(c!==pc)st.push([0,Math.sign(pc-c)]);if(Math.abs(c-pc)>Math.abs(r-pr))st.reverse();return st;};
+      if(chase&&!o.seen){o.seen=1;o.alertT=Date.now();}
+      if(!chase&&o.seen&&(hid||dist>9))o.seen=0;
+      let steps=chase?toward(r,c):(Math.random()<.4?[Object.values(DIRS)[Math.floor(Math.random()*4)]]:[]);
+      let cr=r,cc=c;
+      for(let k=0;k<(chase?2:1);k++){
+        if(k>0){if(Math.abs(cr-pr)+Math.abs(cc-pc)<=1)break;steps=toward(cr,cc);}
+        let mv=false;
+        for(const[dr,dc]of steps){const nr=cr+dr,nc=cc+dc;if(okCell(nr,nc)){o.moved=stamp;setCell(nr,nc,o);setCell(cr,cc,null);cr=nr;cc=nc;mv=true;if(Math.abs(nr-pr)+Math.abs(nc-pc)===1)foe=foe||[nr,nc,o];break;}}
+        if(!mv)break;
+      }
     }else{
       if(Math.random()>.3)continue;
       const[hr,hc]=(o.home||r+","+c).split(",").map(Number),[dr,dc]=Object.values(DIRS)[Math.floor(Math.random()*4)],nr=r+dr,nc=c+dc;
@@ -2362,7 +2481,7 @@ let TICK=0;
 function idleTick(){
   if(!S||S.done||S.dead||B||lock||DLG||$("#ov")||document.hidden||!$("#layer"))return;
   TICK++;
-  const foe=moveMobs("k"+TICK);
+  MOB_T=performance.now();const foe=moveMobs("k"+TICK);
   renderWorld();
   if(foe&&!B&&!lock){const[r,c,o]=foe;pushHist();say(`${Q(FOES[o.ch].name)}が襲いかかってきた！`,"bad");startBattle(r,c,o);}
 }
@@ -2400,8 +2519,10 @@ function endTurn(){
   if(S.turn%5===0)checkQuests(true);
   closeGates();
   spawnWild();
-  if(S.turn%6===0&&hero.hp<hero.max)hero.hp++;
-  const foe=moveMobs();
+  if(S.turn%((S.flags.restUntil||0)>S.turn?2:6)===0&&hero.hp<hero.max)hero.hp++;
+  if(gearOn("helm","翠")&&S.turn%10===0&&hero.hp<hero.max)hero.hp++;
+  if(S.cur==="world"&&onSea()&&!(S.hideUntil>S.turn)&&Math.random()<(gearOn("armor","珠")?.02:.04)){const ch=seaFoe(),o=mkObj(ch);o.kind="enemy";pushHist();say(`海の中から${Q(FOES[ch].name)}が襲いかかってきた！`,"bad");startBattle(S.me[0],S.me[1],o,true);return;}
+  const nowT=performance.now();const foe=nowT-MOB_T>=330?(MOB_T=nowT,moveMobs()):adjFoe();
   latchUpdate();
   const now=readTexts(),L=D();
   for(const k of Object.keys(now))if(now[k]!==M().lastTexts[k]){
@@ -2568,11 +2689,13 @@ function renderWorld(first){
     if(o.myf&&WALK_FURN.has(o.ch)){cls+=" walkf";if(o.ch==="障"&&r===S.me[0]&&c===S.me[1])cls+=" shopen";}
     if(o.kind==="gate"){cls+=o.open?" open":"";html=`<span class="l">門</span><span class="r">門</span>`;}
     if(o.empty)cls+=" empty";
+    if(o.kind==="enemy"&&o.alertT&&Date.now()-o.alertT<1600)html+='<i class="alert">！</i>';
     const el=put("o"+o.id,r,c,cls,html,fx.born&&fx.born.includes(o.id));
     if(flashIdx.has(o.id)){el.classList.add("flash");el.style.setProperty("--d",flashIdx.get(o.id)*55+"ms");const sp=el.querySelector("span");if(sp){sp.style.animation="none";void sp.offsetWidth;sp.style.animation="";}}
   }
   const meCls=`me f-${S.face}${fx.walk?" walk":""}${fx.nudge?" nudge":""}`+((at(S.me[0],S.me[1])||{}).ch==="水"||(zoneAt(S.me[0],S.me[1],zs)||{}).pass?" swim":"");
-  const me=put("me",S.me[0],S.me[1],meCls,`<span>我</span>`);
+  const hidN=Math.max(0,(S.hideUntil||0)-(S.turn||0)),boat=S.flags.boat&&onWater();
+  const me=put("me",S.me[0],S.me[1],meCls+(hidN?" hidden":"")+(boat?" boat":""),`<span>我</span>${boat?'<i class="boatc">舟</i>':""}${hidN?`<i class="hidn">${hidN}</i>`:""}`);
   if(fx.walk||fx.nudge){const sp=me.querySelector("span");sp.style.animation="none";void sp.offsetWidth;sp.style.animation="";}
   if(fx.walk&&isWorld&&Math.random()<.5)particles(layer,cs,{r:S.me[0]-DIRS[S.face][0]*.4,c:S.me[1]-DIRS[S.face][1]*.4,chars:["、","丶"],n:2});
   if(fx.burst)particles(layer,cs,fx.burst);
@@ -2595,7 +2718,8 @@ function renderWorld(first){
   if(isWorld){
     const t=nextGoal(),dr=t.at[0]-S.me[0],dcc=t.at[1]-S.me[1],dist=Math.abs(dr)+Math.abs(dcc);
     const dir=(dr<-2?"北":dr>2?"南":"")+(dcc>2?"東":dcc<-2?"西":"");
-    co.innerHTML=`<span>東 ${S.me[1]}　南 ${S.me[0]}　<span class="lights">光 ${lights}</span></span><span>${dist<3?`${t.name}は目の前`:`${t.name}　${dir||"すぐ近く"}へ ${dist}歩`}</span>`;
+    const hn=Math.max(0,(S.hideUntil||0)-(S.turn||0));
+    co.innerHTML=`<span>東 ${S.me[1]}　南 ${S.me[0]}　<span class="lights">光 ${lights}</span>${hn?`　<b class="hidtag">隠 あと${hn}歩</b>`:""}</span><span>${dist<3?`${t.name}は目の前`:`${t.name}　${dir||"すぐ近く"}へ ${dist}歩`}</span>`;
   }else co.innerHTML=`<span>${D().name}の中　<span class="lights">光 ${lights}</span></span><span></span>`;
 }
 function sealHas(ch){const w=S.maps.world;if(!w)return false;const[r,c0,c1]=WORLD_TEXTS.SEAL;for(let c=c0;c<=c1;c++){const o=w.ov[r+","+c];if(o&&o.ch===ch)return true;}return false;}
@@ -2856,7 +2980,13 @@ const BOSS_AI={
   妖:{moves:["petal","vine","clones","petal"],projCh:"花"},
   鯰:{moves:["quake","mud","dive","mud"]},
   篁:{moves:["bamboo","zone","bamboo"],wallCh:"竹"},
-  坊:{moves:["dive","water","dive"]},
+  坊:{moves:["dive","pull","summon","dive"],minion:"泡"},
+  蛸:{moves:["grab","dive","zone","grab"]},
+  蟒:{moves:["dive","wave","proj","wave"],projCh:"牙"},
+  鯨:{moves:["charge","zone","proj","charge"],projCh:"水"},
+  溟:{moves:["dive","proj","charge","dive","proj"],projCh:"槍"},
+  颱:{moves:["stonerain","gust","zone","stonerain"],projCh:"石"},
+  濤:{moves:["half","pull","half","zone"]},
 };
 const isMainBoss=f=>!!(f&&(BOSSES.has(f.glyph)||f.ura||f.trueFinal||f.glyph==="鬼")&&!f.tutorial);
 function slotRings(lines,keep,bal){
@@ -2889,6 +3019,7 @@ function startArena(r,c,o){
   B={arena:true,r,c,f,hp,max:hp,lines,rings,loose,lid:100,tut:f.tutorial?0:null,me:[AR-1,AC],face:"up",warn:[],shots:[],turn:0,
      log:[f.open||`${f.name}が立ちはだかった！`,"赤い所から逃げろ。回る字にぶつかれば削れ、［分］で分けられる。床の字は押して合わせ、敵にぶつけろ。"],busy:false,pops:[],gone:[],bursts:[],
      bp:[AC,AC],rc:[AC,AC],hz:{},walls:{},mins:[],decoys:[],orig:lines.map(l=>l.slice()),phase:1,ai:f.tutorial?null:(BOSS_AI[f.glyph]||null),mi:0,stuck:0,mid:0};
+  if(gearOn("armor","金")&&!f.tutorial){hero.hp=Math.min(hero.max,hero.hp+2);B.log.push("金の鎧が光り、心が二つ戻った。");}
   arenaWarn();
   if(f.tutorial)B.warn=arenaPattern("adj").concat([[B.me[0],B.me[1]]]).filter(([r,c])=>!(r===B.me[0]&&c===B.me[1]-1));
   wipe(true);setTimeout(()=>{buildArena();wipe(false);if(!f.tutorial)tip("arena");else S.flags.tip_arena=true;},220);
@@ -2925,7 +3056,7 @@ function safeFix(cells){
   return cells.filter(([r,c])=>!(r===p[0]&&c===p[1]));
 }
 function planMove(mv){
-  const ai=B.ai,[pr,pc]=B.me,[br,bc]=BPOS(),P={k:mv,cells:[]},big=B.phase>1;
+  const ai=B.ai,[pr,pc]=B.me,[br,bc]=BPOS(),big=B.phase>1;let grab=false;if(mv==="grab"){mv="vine";grab=true;}const P={k:mv,cells:[]};
   const lane=(dir,idx)=>{const out=[];for(let i=0;i<AR;i++)out.push(dir==="row"?[idx,i]:[i,idx]);return out;};
   const pc2=()=>Math.random()<.5?"row":"col";
   if(mv==="zone"){const kinds=big?["adj2","row2","col2","rain","diag","adj","row","col"]:["adj","row","col","rain","diag","row2","col2"];const k=kinds[Math.floor(Math.random()*kinds.length)];
@@ -2936,7 +3067,10 @@ function planMove(mv){
   else if(mv==="proj"||mv==="rock"){const n=mv==="rock"?1:big?2:1;const d=pc2();P.ch=mv==="rock"?"岩":(ai.projCh||B.f.weapon.slice(0,1));
     P.cells=lane(d,d==="row"?pr:pc);if(n>1){const o=d==="row"?pr+(Math.random()<.5?2:-2):pc+(Math.random()<.5?2:-2);if(inB(o,o))P.cells.push(...lane(d,o));}
     P.msg=`${B.f.name}の${P.ch}が、一直線に飛んでくる！`;}
-  else if(mv==="inkrain"||mv==="icerain"){P.ch=mv==="inkrain"?"墨":"氷";const cols=new Set([pc]);while(cols.size<(big?5:4)){cols.add(Math.floor(Math.random()*AR));}cols.forEach(c=>P.cells.push(...lane("col",c)));P.msg=`${P.ch}の弾が、雨のように降ってくる！`;}
+  else if(mv==="gust"){P.cells=arenaPattern("adj").concat([[pr,pc]]);P.knock=2;P.msg=`${B.f.name}の風がうなる……吹き飛ばされるぞ！`;}
+  else if(mv==="wave"){const vert=Math.random()<.5,band=Math.floor(Math.random()*3),a0=band*4,a1=band===2?AR:a0+4;for(let a=a0;a<a1;a++)for(let b=0;b<AR;b++){const[r,c]=vert?[b,a]:[a,b];if(!isBossCell(r,c))P.cells.push([r,c]);}P.wall="波";P.wallHurt=false;P.hurt=true;P.big=true;P.msg=`${B.f.name}が大波を起こした！　場の三分の一が波にのまれる！`;}
+  else if(mv==="half"){const vert=Math.random()<.5,side=Math.random()<.5;for(let a=0;a<AR;a++)for(let b=0;b<AR;b++){const k=vert?b:a;if((side?k<=6:k>=6)&&!isBossCell(a,b))P.cells.push([a,b]);}P.hz="water";P.hurt=true;P.ttl=1;P.msg=`${B.f.name}が押し寄せる！　場の半分が水にのまれるぞ！`;}
+  else if(mv==="inkrain"||mv==="icerain"||mv==="stonerain"){P.ch=mv==="inkrain"?"墨":mv==="stonerain"?"石":"氷";const cols=new Set([pc]);while(cols.size<(big?5:4)){cols.add(Math.floor(Math.random()*AR));}cols.forEach(c=>P.cells.push(...lane("col",c)));P.msg=`${P.ch}の弾が、雨のように降ってくる！`;}
   else if(mv==="petal"){P.ch="花";P.cells=arenaPattern("diag").concat(arenaPattern("adj"));P.msg="花びらが渦を巻いて舞う！";}
   else if(["fire","inkfloor","ice","water","mud","vine"].includes(mv)){const t={fire:"fire",inkfloor:"ink",ice:"ice",water:"water",mud:"mud",vine:"vine"}[mv];
     P.cells=cluster(pr,pc,big?7:5);P.hz=t;P.hurt=t==="fire"||t==="ink";P.msg={fire:"床が赤く熱をおびる……燃えるぞ！",ink:"床に墨がにじんでいく……",ice:"床が白く凍りはじめた……",water:"床に水があふれてくる……",mud:"床がぬかるんでいく……",vine:"床から蔦が這い出してくる……"}[t];}
@@ -2954,6 +3088,7 @@ function planMove(mv){
   else if(mv==="teleport"){const c=nearFree(pr,pc,3);P.dest=c.length?c[Math.floor(Math.random()*c.length)]:[br,bc];for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)if(inB(P.dest[0]+a,P.dest[1]+b))P.cells.push([P.dest[0]+a,P.dest[1]+b]);P.msg=`${B.f.name}の姿がゆらぎ、別の場所に現れようとしている……`;}
   else if(mv==="charge"){const dr=Math.sign(pr-br),dc=Math.sign(pc-bc);const vert=Math.abs(pr-br)>=Math.abs(pc-bc);const d=vert?[dr||1,0]:[0,dc||1];P.dir=d;
     for(let k=1;k<AR;k++){const r=br+d[0]*k,c=bc+d[1]*k;if(!inB(r,c))break;for(const w of[-1,0,1]){const rr=r+(d[1]?w:0),cc=c+(d[0]?w:0);if(inB(rr,cc))P.cells.push([rr,cc]);}}P.msg=`${B.f.name}が身をかがめた……突進してくる！`;}
+  if(grab)P.msg=`${B.f.name}の足が、床をはいまわる……からみつかれるぞ！`;
   P.cells=P.hz&&P.noDmg?P.cells:safeFix(P.cells);
   return P;
 }
@@ -2967,14 +3102,18 @@ function nowMove(P){
 }
 function arenaAfter(P,R,fx){
   // 床・壁を残す
-  if(P.hz)P.cells.forEach(([r,c])=>{if(!isBossCell(r,c))B.hz[r+","+c]={t:P.hz,ttl:P.hz==="fire"||P.hz==="ink"?3:5};});
-  if(P.wall)P.cells.forEach(([r,c])=>{if(!(r===B.me[0]&&c===B.me[1])&&!arenaOcc(r,c))if(Object.keys(B.walls).length<14)B.walls[r+","+c]={ch:P.wall,ttl:4,hurt:P.hurt};});
+  if(P.hz)P.cells.forEach(([r,c])=>{if(!isBossCell(r,c))B.hz[r+","+c]={t:P.hz,ttl:P.ttl||(P.hz==="fire"||P.hz==="ink"?3:5)};});
+  if(P.wall==="波")for(const k of Object.keys(B.walls))if(B.walls[k].ch==="波")delete B.walls[k];
+  if(P.wall)P.cells.forEach(([r,c])=>{if(!(r===B.me[0]&&c===B.me[1])&&!arenaOcc(r,c))if(P.big||Object.keys(B.walls).length<14)B.walls[r+","+c]={ch:P.wall,ttl:P.big?3:4,hurt:P.wallHurt!==undefined?P.wallHurt:P.hurt};});
   const ai=B.ai;
+  if(P.knock&&P.cells.some(([r,c])=>r===B.me[0]&&c===B.me[1])){const[br,bc]=BPOS();let dr=Math.sign(B.me[0]-br),dc=Math.sign(B.me[1]-bc);if(dr&&dc){if(Math.random()<.5)dr=0;else dc=0;}if(!dr&&!dc)dr=1;let n=0;for(;n<P.knock;n++){const t=[B.me[0]+dr,B.me[1]+dc];if(!freeCell(t[0],t[1]))break;B.me=t;}if(n){B.log.push("!風に吹き飛ばされた！");fx.knock=true;}}
+  if(gearOn("armor","鉛")&&B.turn%5===0&&!B.stuck){B.stuck=1;B.log.push("鎧が重く、足が止まった。");}
+  if(B.psn>0){B.psn--;B.hp-=1;B.pops.push({r:BPOS()[0],c:BPOS()[1],t:"−1",cls:"dmg"});B.log.push(`${B.f.name}に毒がまわる。1の傷。`);}
   if(ai){
     // ひろがる炎
     if(ai.spread){const fires=Object.keys(B.hz).filter(k=>B.hz[k].t==="fire");for(let i=0;i<1&&fires.length;i++){const[r,c]=fires[Math.floor(Math.random()*fires.length)].split(",").map(Number),d=Object.values(DIRS)[Math.floor(Math.random()*4)];const k=(r+d[0])+","+(c+d[1]);if(inB(r+d[0],c+d[1])&&!B.hz[k])B.hz[k]={t:"fire",ttl:3};}}
     // 書きもどす
-    if(ai.rewrite&&R.rewrite&&B.turn%5===0){outer:for(let li=0;li<B.lines.length;li++)for(let ci=1;ci<B.lines[li].length;ci++){if(B.lines[li][ci]==="　"&&B.orig[li]&&B.orig[li][ci]&&B.orig[li][ci]!=="　"){B.lines[li][ci]=B.orig[li][ci];B.log.push(`!${B.f.name}が、削られた${Q(B.orig[li][ci])}を書きもどした！${B.rwTip?"":"（空いた所に別の字を書きこめば、もう書きもどせない）"}`);B.rwTip=1;sfx.write();fx.write=[li,ci];break outer;}}}
+    if(ai.rewrite&&R.rewrite&&B.turn%5===0&&!(gearOn("helm","解")&&Math.random()<.5)){outer:for(let li=0;li<B.lines.length;li++)for(let ci=1;ci<B.lines[li].length;ci++){if(B.lines[li][ci]==="　"&&B.orig[li]&&B.orig[li][ci]&&B.orig[li][ci]!=="　"){B.lines[li][ci]=B.orig[li][ci];B.log.push(`!${B.f.name}が、削られた${Q(B.orig[li][ci])}を書きもどした！${B.rwTip?"":"（空いた所に別の字を書きこめば、もう書きもどせない）"}`);B.rwTip=1;sfx.write();fx.write=[li,ci];break outer;}}}
     // 動く
     if(ai.chaseEvery&&B.turn%ai.chaseEvery===0&&!B.hidden){const[br,bc]=BPOS(),[pr,pc]=B.me,d=Math.abs(pr-br)>=Math.abs(pc-bc)?[Math.sign(pr-br),0]:[0,Math.sign(pc-bc)],nr=br+d[0],nc=bc+d[1];
       if(nr===pr&&nc===pc){const dm=Math.max(1,R.dmg);hero.hp-=dm;B.pops.push({r:pr,c:pc,t:"−"+dm,cls:"dmg"});B.log.push(`!${B.f.name}が詰め寄って殴りつけた。心を${dm}つ失った。`);sfx.hurt();fx.hurt=true;}
@@ -2990,7 +3129,8 @@ function arenaAfter(P,R,fx){
   // 床の効き目
   const k=B.me[0]+","+B.me[1],h=B.hz[k];
   if(h){
-    if(h.t==="fire"){hero.hp-=1;B.pops.push({r:B.me[0],c:B.me[1],t:"−1",cls:"dmg"});B.log.push("!燃える床に焼かれた。心をひとつ失った。");sfx.hurt();fx.hurt=true;}
+    if((h.t==="fire"&&gearOn("armor","紅"))||((h.t==="water"||h.t==="mud")&&gearOn("armor","青"))||(h.t==="vine"&&gearOn("armor","翠"))){}
+    else if(h.t==="fire"){hero.hp-=1;B.pops.push({r:B.me[0],c:B.me[1],t:"−1",cls:"dmg"});B.log.push("!燃える床に焼かれた。心をひとつ失った。");sfx.hurt();fx.hurt=true;}
     else if(h.t==="ink"){const ed=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c)&&!isWeapon(c));if(ed.length){const[ch,i]=ed[Math.floor(Math.random()*ed.length)];hero.bag.splice(i,1);B.log.push(`!墨の床に、字袋の${Q(ch)}が吸いこまれた！`);}}
     else if(h.t==="fake"){hero.hp-=1;delete B.hz[k];B.pops.push({r:B.me[0],c:B.me[1],t:"−1",cls:"dmg"});B.log.push("!幻の床だった！　足を踏みはずした。心をひとつ失った。");sfx.hurt();fx.hurt=true;}
     else if((h.t==="mud"||h.t==="water"||h.t==="vine")&&B.hzAt!==k){B.stuck=1;B.log.push(h.t==="vine"?"蔦が足にからみついた。次の一歩は動けない。":h.t==="mud"?"泥に足を取られた。次の一歩は動けない。":"水に足を取られた。次の一歩は動けない。");}
@@ -3021,7 +3161,7 @@ function arenaWarn(){
     if(P.now){nowMove(P);const Z=planMove("zone");B.plan=Z;B.warn=Z.cells;}
     else{B.plan=P;B.warn=P.cells;if(P.msg)B.log.push("!"+P.msg);}
     const seen=new Set();B.warn=B.warn.filter(([r,c])=>{const k=r+","+c;if(seen.has(k))return false;seen.add(k);return true;});
-    B.faint=!!B.ai.blizzard;
+    B.faint=!!B.ai.blizzard&&!gearOn("helm","蛍");
     return;
   }
   const kinds=["adj","row","col","rain","diag"];
@@ -3038,7 +3178,7 @@ function arenaAct(kind,arg){
     const o=arenaOcc(nr,nc);
     if(B.stuck){B.stuck=0;sfx.bump();B.log.push("足を取られて、動けない！");}
     else if(!o){B.me=[nr,nc];sfx.step();
-      let n=0;while(B.hz[B.me[0]+","+B.me[1]]&&B.hz[B.me[0]+","+B.me[1]].t==="ice"&&n++<AR){const tr=B.me[0]+dr,tc=B.me[1]+dc;if(!inB(tr,tc)||arenaOcc(tr,tc))break;B.me=[tr,tc];if(n===1)B.log.push("氷の床で、つるりと滑った！");}}
+      let n=0;while(!gearOn("armor","解")&&B.hz[B.me[0]+","+B.me[1]]&&B.hz[B.me[0]+","+B.me[1]].t==="ice"&&n++<AR){const tr=B.me[0]+dr,tc=B.me[1]+dc;if(!inB(tr,tc)||arenaOcc(tr,tc))break;B.me=[tr,tc];if(n===1)B.log.push("氷の床で、つるりと滑った！");}}
     else if(o.wall){sfx.bump();if(o.wall.hurt){hero.hp-=1;B.pops.push({r:B.me[0],c:B.me[1],t:"−1",cls:"dmg"});B.log.push(`!${Q(o.ch)}の槍に刺された。心をひとつ失った。`);fx.hurt=true;}else B.log.push(`${Q(o.ch)}の壁にはばまれた。`);}
     else if(o.decoy!==undefined){B.decoys.splice(o.decoy,1);sfx.split();B.bursts.push({r:nr,c:nc});B.log.push(`斬った……分身だった。${B.f.name}の分身がひとつ消えた。`);}
     else if(o.min){B.mins=B.mins.filter(m=>m!==o.min);sfx.cut();B.bursts.push({r:nr,c:nc});B.gone.push({r:nr,c:nc,ch:o.ch});B.log.push(`手下の${Q(o.ch)}を斬りすてた。`);}
@@ -3057,7 +3197,7 @@ function arenaAct(kind,arg){
       }
     }
   }else if(kind==="drink"){
-    const i=hero.bag.indexOf("薬");if(i<0)return;hero.bag.splice(i,1);const h=Math.min(3,hero.max-hero.hp);hero.hp+=h;sfx.heal();B.pops.push({r:B.me[0],c:B.me[1],t:"+"+h,cls:"heal"});B.log.push(`${Q("薬")}を飲んだ。心が${h}つ戻った。`);
+    let i=hero.bag.indexOf("薬"),dan=false;if(i<0){i=hero.bag.indexOf("丹");dan=true;}if(i<0)return;hero.bag.splice(i,1);const h=dan?hero.max-hero.hp:Math.min(3+(gearOn("armor","紫")?1:0),hero.max-hero.hp);hero.hp+=h;sfx.heal();B.pops.push({r:B.me[0],c:B.me[1],t:"+"+h,cls:"heal"});B.log.push(`${Q(dan?"丹":"薬")}を飲んだ。心が${h}つ戻った。`);
   }else if(kind==="wait"){B.log.push("じっと構えた。");}
   if(B.hp<=0&&!arenaRevive()){B.busy=true;B.log.push(`${B.f.name}を討った。`);sfx.win();renderArena({dead:true});setTimeout(winBattle,1400);return;}
   arenaTurn(fx);
@@ -3074,7 +3214,7 @@ function arenaHitBoss(dmg,how,fx,ignoreHard){
   if(R.invincible){sfx.cut();B.log.push(`${how}。だが${B.f.name}は無敵だ。`);return;}
   if(R.hard&&!ignoreHard){sfx.bump();B.log.push(`${how}が、はね返された。${B.f.name}は硬い。`);return;}
   B.hp-=dmg;B.pops.push({r:BPOS()[0],c:BPOS()[1],t:"−"+dmg,cls:"dmg"});sfx.cut();
-  if(R.immortal&&B.hp>0){B.hp=B.max;B.log.push(`${how}。${dmg}の傷が、たちまち塞がった。不死なのだ。`);}
+  if(R.immortal&&B.hp>0){B.hp=gearOn("armor","銀")?Math.max(1,B.hp+dmg-1):B.max;B.log.push(`${how}。${dmg}の傷が、たちまち塞がった。不死なのだ。`);}
   else B.log.push(`${how}。${B.f.name}に${dmg}の傷！`);
 }
 function arenaPush(L,dr,dc,fx){
@@ -3095,8 +3235,8 @@ function arenaPush(L,dr,dc,fx){
     if(o.min){B.mins=B.mins.filter(m=>m!==o.min);B.log.push(`${Q(L.ch)}をぶつけて、手下の${Q(o.ch)}を倒した。`);}else{B.decoys.splice(o.decoy,1);B.log.push(`${Q(L.ch)}をぶつけた……分身だった。`);}return true;}
   if(o.boss){
     B.loose=B.loose.filter(x=>x!==L);B.me=[L.r,L.c];
-    const dmg=isCmp(L.ch)?(leavesOf(L.ch).reduce((s,x)=>s+(THROW[x]||1),0)+1):(THROW[L.ch]||1);
-    if(L.ch==="明"){
+    const dmg=(isCmp(L.ch)?(leavesOf(L.ch).reduce((s,x)=>s+(THROW[x]||1),0)+1):(THROW[L.ch]||1))+((L.ch==="火"||L.ch==="炎")&&gearOn("helm","紅")?2:0);
+    if(L.ch==="明"||L.ch==="光"){
       let lit=false;B.lines.forEach(l=>{const s=l.join(""),i=s.indexOf("見えない");if(i>=0){for(let k=i;k<i+4;k++)l[k]="　";lit=true;}});
       if(lit){sfx.unlock();B.log.push(`${Q("明")}の光が、隠れていた${B.f.name}の姿を照らしだした！`);B.bursts.push({r:BPOS()[0],c:BPOS()[1]});return true;}
     }
@@ -3146,7 +3286,8 @@ function arenaStrike(R,fx){
   const F=selfFx();B.crit=false;B.weakHit=false;const a=heroAtk(R)*(F.fast?2:1);sfx.cut();B.hp-=a;B.pops.push({r:BPOS()[0],c:BPOS()[1],t:"−"+a,cls:"dmg"});
   if(B.crit)B.log.push("会心の一撃！");if(B.weakHit)B.log.push("弱点を突いた！");
   if(F.drain&&hero.hp<hero.max){hero.hp++;B.pops.push({r:B.me[0],c:B.me[1],t:"+1",cls:"heal"});}
-  if(R.immortal&&B.hp>0){B.hp=B.max;B.log.push(`${a}の傷。…が、たちまち塞がった。不死なのだ。`);}
+  if(R.immortal&&B.hp>0){B.hp=gearOn("armor","銀")?Math.max(1,B.hp+a-1):B.max;B.log.push(`${a}の傷。…が、たちまち塞がった。不死なのだ。`);}
+  else if(gearOn("helm","輝"))B.psn=3;
   else B.log.push(`${F.fast?"二度":""}斬った。${B.f.name}に${a}の傷。`);
   afterStrike(W,B.lines,B.log);
 }
@@ -3196,14 +3337,14 @@ function arenaTurn(fx){
   B.shots=B.warn.slice();B.shotCh=P.ch||null;
   if(B.warn.length&&!B.warn.some(([r,c])=>r===B.me[0]&&c===B.me[1]))tutAdvance("dodge");
   if(B.warn.some(([r,c])=>r===B.me[0]&&c===B.me[1])){
-    const F=selfFx();const bonus=(R.dmg>0&&B.ai&&isMainBoss(B.f)&&B.phase>1?1:0)+(P.extra||0);let dm=P.noDmg&&!P.hurt?0:Math.max(0,R.dmg+bonus+(R.fast&&R.dmg>0?1:0)-F.guard);if(P.hz&&!P.hurt)dm=0;
+    const F=selfFx();const bonus=(R.dmg>0&&B.ai&&isMainBoss(B.f)&&B.phase>1?1:0)+(P.extra||0);let dm=P.noDmg&&!P.hurt?0:Math.max(0,R.dmg+bonus+(R.fast&&R.dmg>0?1:0)-F.guard);if(P.hz&&!P.hurt)dm=0;if(dm>0&&(P.k==="quake"||P.k==="stonerain")&&gearOn("helm","鉄"))dm=Math.ceil(dm/2);
     if(F.evade&&Math.random()<.5){dm=-1;B.log.push("降りそそぐ字を、ひらりとかわした。");}
     else if(R.blind&&Math.random()<.5){dm=-1;B.log.push(`${B.f.name}は目がくらみ、狙いが外れた。`);}
     else if(R.confused&&Math.random()<.5){dm=-1;const d=Math.max(1,R.dmg);B.hp-=d;B.pops.push({r:BPOS()[0],c:BPOS()[1],t:"−"+d,cls:"dmg"});B.log.push(`${B.f.name}は混乱して、自分を打った。`);}
     if(dm>0&&F.reflect){B.hp-=1;B.pops.push({r:BPOS()[0],c:BPOS()[1],t:"−1",cls:"dmg"});}
-    if(dm<0){}else if(dm>0){hero.hp-=dm;B.pops.push({r:B.me[0],c:B.me[1],t:"−"+dm,cls:"dmg"});B.log.push(`!${B.f.name}の${P.ch||B.f.weapon}が${R.fast?"すばやく":""}我を打った。心を${dm}つ失った。`);sfx.hurt();fx.hurt=true;
+    if(dm<0){}else if(dm>0){hero.hp-=dm;B.pops.push({r:B.me[0],c:B.me[1],t:"−"+dm,cls:"dmg"});{const rf=gearReflect(dm);if(rf){B.hp-=rf;B.log.push(`鎧が${rf}の傷をはね返した。`);}}B.log.push(`!${B.f.name}の${P.ch||B.f.weapon}が${R.fast?"すばやく":""}我を打った。心を${dm}つ失った。`);sfx.hurt();fx.hurt=true;
       if(B.ai&&B.ai.eatOnHit){const ed=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c));if(ed.length){const[ch,i]=ed[Math.floor(Math.random()*ed.length)];hero.bag.splice(i,1);B.log.push(`!${B.f.name}が字袋の${Q(ch)}を喰った。`);}}
-      if(B.ai&&B.ai.steal){const can=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c)&&!isWeapon(c));if(can.length){const[ch,i]=can[Math.floor(Math.random()*can.length)];hero.bag.splice(i,1);B.stolen=B.stolen||[];B.stolen.push(ch);B.log.push(`!${B.f.name}が${Q(ch)}を盗んだ！　倒せば取り返せる。`);}}}
+      if(B.ai&&B.ai.steal&&!gearOn("helm","鉛")){const can=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c)&&!isWeapon(c));if(can.length){const[ch,i]=can[Math.floor(Math.random()*can.length)];hero.bag.splice(i,1);B.stolen=B.stolen||[];B.stolen.push(ch);B.log.push(`!${B.f.name}が${Q(ch)}を盗んだ！　倒せば取り返せる。`);}}}
     else if(!P.hz&&!P.wall){B.log.push(`${B.f.weapon}が降ったが、まるで効かない。`);sfx.bump();}
   }else if(B.warn.length)sfx.foe();
   arenaAfter(P,R,fx);
@@ -3265,15 +3406,15 @@ function renderArena(fx){
   const R=foeRules(arenaText());
   fl.querySelectorAll(".ch3").forEach(e=>e._seen=false);
   fl.querySelectorAll(".tile").forEach(t=>{t.className="tile";});
-  for(const k in (B.hz||{})){const t=fl.querySelector(`[data-t="${k}"]`);if(t)t.classList.add("hz-"+B.hz[k].t);}
+  for(const k in (B.hz||{})){if(B.hz[k].t==="fake"&&!gearOn("armor","蛍"))continue;const t=fl.querySelector(`[data-t="${k}"]`);if(t)t.classList.add("hz-"+B.hz[k].t);}
   B.warn.forEach(([r,c])=>{const t=fl.querySelector(`[data-t="${r},${c}"]`);if(t)t.classList.add("warn",...(B.faint?["faint"]:[]));});
   for(const k in (B.walls||{})){const[r,c]=k.split(",").map(Number);put3(fl,"w"+k,r,c,"wall3"+(B.walls[k].hurt?" spike":""),B.walls[k].ch,0);}
   (B.mins||[]).forEach(m=>put3(fl,m.id,m.r,m.c,"min3",m.ch,0));
-  (B.decoys||[]).forEach(([r,c],i)=>put3(fl,"dc"+i,r,c,"boss decoy"+(R.fly?" fly":""),B.f.glyph,R.fly?ACS*1.1:0));
+  (B.decoys||[]).forEach(([r,c],i)=>put3(fl,"dc"+i,r,c,"boss decoy"+(gearOn("helm","銀")?" seen":"")+(R.fly?" fly":""),B.f.glyph,R.fly?ACS*1.1:0));
   if(!B.hidden)put3(fl,"boss",BPOS()[0],BPOS()[1],"boss"+(R.fly?" fly":"")+(R.hide&&!R.fly?" ghost":"")+(R.sleep?" sleep":"")+(fx.hit?" hit":"")+(fx.dead?" dead":""),B.f.glyph,R.fly?ACS*1.1:0);
   B.rings.forEach((Rg,ri)=>Rg.slots.forEach((s,k)=>{if(!s)return;const ch=B.lines[s.li][s.ci];if(ch==="　")return;const[r,c]=ringPos(Rg,k);
     const w=fx.write&&fx.write[0]===s.li&&fx.write[1]===s.ci;
-    put3(fl,`s${s.li}-${s.ci}`,r,c,"orb"+(s.ci===0?" name":"")+(w?" drop":"")+` ring${ri}`,ch,0);}));
+    put3(fl,`s${s.li}-${s.ci}`,r,c,"orb"+(s.ci===0?" name":"")+(w?" drop":"")+` ring${ri}`+(gearOn("helm","晶")&&"守不無見飛硬".includes(ch)?" glow":""),ch,0);}));
   B.loose.forEach(L=>{put3(fl,L.id,L.r,L.c,"loose3"+(L.born?" drop":""),L.ch,0);L.born=false;});
   B.bursts.forEach(b=>{["丶","ノ","一","丨","㇏"].forEach((ch,i)=>{const e=put3(fl,"b"+Math.random(),b.r,b.c,"fx spark",ch,ACS*.5);e.style.setProperty("--a",(i*72)+"deg");setTimeout(()=>e.remove(),700);});});B.bursts=[];
   tutRings().forEach(([r,c,lab],i)=>put3(fl,"tr"+i,r,c,"tring",lab||"",0));
@@ -3298,18 +3439,18 @@ function renderArena(fx){
   $("#ahand").onclick=()=>{if(!S.hand)return;hero.bag.push(S.hand);S.hand=null;sfx.place();renderArena({});};
   document.querySelectorAll("[data-aself]").forEach(b=>b.onclick=()=>{if(!S.hand||B.busy){B.log.push("字袋の字を押して手に持ち、それから我の文を押そう。");renderArena({});return;}
     B.self=B.self||[];B.self[+b.dataset.aself]=S.hand;B.log.push(`我の文に${Q(S.hand)}と書いた。${ITEM_INFO[S.hand]||""}`);S.hand=null;sfx.write();arenaTurn({});});
-  $("#adn").textContent=`${hero.bag.filter(x=>x==="薬").length}つ`;
+  {const nm=hero.bag.filter(x=>x==="薬").length,nd=hero.bag.filter(x=>x==="丹").length;$("#adn").textContent=nd?`${nm}つ・丹${nd}`:`${nm}つ`;}
   {const W=weaponFx(R);$("#atr").textContent=`届${W.reach}${(hero.eq||[]).includes("弓")?`・矢${hero.arrows||0}`:""}`;}
   $("#ad").disabled=!hero.bag.includes("薬");
   speakLog();$("#alog").innerHTML=B.log.slice(-2).filter(Boolean).map(h=>`<p class="${h.startsWith("!")?"bad":""}">${h.replace(/^!/,"")}</p>`).join("");
 }
 
 
-function startBattle(r,c,o){
-  if(FOES[o.ch].boss||FOES[o.ch].drop||FOES[o.ch].tutorial||FOES[o.ch].ura||FOES[o.ch].trueFinal||FOES[o.ch].arena||o.ch==="鬼")return startArena(r,c,o);
+function startBattle(r,c,o,sea){
+  if(FOES[o.ch].boss||FOES[o.ch].drop||FOES[o.ch].tutorial||FOES[o.ch].ura||FOES[o.ch].trueFinal||FOES[o.ch].arena||o.ch==="鬼"){startArena(r,c,o);if(B&&sea)B.sea=true;return;}
   const f=FOES[o.ch];sfx.foe();
   const extra=MOB_SET.has(o.ch)?Math.floor((D().tier||0)/3):0;
-  B={r,c,f,hp:f.hp+extra,max:f.hp+extra,mob:MOB_SET.has(o.ch),lines:f.lines.map(s=>[...s]),mode:null,sel:null,log:[f.open||`${f.name}があらわれた！　敵もまた、文でできている。`],busy:false};
+  B={r,c,f,sea:!!sea,hp:f.hp+extra,max:f.hp+extra,mob:MOB_SET.has(o.ch),lines:f.lines.map(s=>[...s]),mode:null,sel:null,log:[f.open||`${f.name}があらわれた！　敵もまた、文でできている。`],busy:false};
   wipe(true);setTimeout(()=>{renderBattle();wipe(false);tip("battle");},220);
 }
 const bText=()=>B.lines.map(l=>l.join("")).join("／");
@@ -3351,8 +3492,8 @@ function renderBattle(anim={}){
   document.querySelectorAll("[data-self]").forEach(b=>b.onclick=()=>pickSelf(+b.dataset.self));
   if(B&&B.glow){const g=B.glow.startsWith("#")?$(B.glow):document.querySelector(`.ch[data-li="${B.glow.split("-")[0]}"][data-ci="${B.glow.split("-")[1]}"]`);if(g)g.classList.add("glow");}
 }
-function selfFx(){const s=(B&&B.self||[]).join("");return{fast:s.includes("速"),strong:s.includes("強"),sharp:s.includes("鋭"),guard:(s.includes("盾")?1:0)+(s.includes("硬")?1:0),heal:s.includes("癒"),evade:s.includes("飛")||s.includes("避"),reflect:s.includes("返"),drain:s.includes("吸"),brave:s.includes("勇")};}
-function heroAtk(R){const F=selfFx(),W=weaponFx(R);let a=hero.atk+W.atk+(F.strong?2:0)+(F.sharp?1:0)+(R&&R.broken?1:0);if(W.weak){a*=2;if(B)B.weakHit=true;}if(R&&R.brittle)a*=2;if(F.brave&&Math.random()<.3){a*=2;if(B)B.crit=true;}return a;}
+function selfFx(){const s=(B&&B.self||[]).join("");return{fast:s.includes("速"),strong:s.includes("強"),sharp:s.includes("鋭"),guard:(s.includes("盾")?1:0)+(s.includes("硬")?1:0)+gearGuard(),heal:s.includes("癒"),evade:s.includes("飛")||s.includes("避"),reflect:s.includes("返"),drain:s.includes("吸"),brave:s.includes("勇")};}
+function heroAtk(R){const F=selfFx(),W=weaponFx(R);let a=hero.atk+W.atk+gearAtk()+(F.strong?2:0)+(F.sharp?1:0)+(R&&R.broken?1:0);if(W.weak){a*=2;if(B)B.weakHit=true;}if(R&&R.brittle)a*=2;if(F.brave&&Math.random()<.3){a*=2;if(B)B.crit=true;}return a;}
 function freezeTick(lines){B.frz=(B.frz||0)+1;if(B.frz>=2){B.frz=0;for(const l of lines)for(let i=0;i<l.length;i++)if(l[i]==="凍"){l[i]="水";B.log.push("凍の字が溶けて、水になった。");return;}}}
 function pickSelf(i){
   if(!B||B.busy||B.mode!=="write"||!B.sel)return;
@@ -3375,7 +3516,9 @@ function bAct(kind,p){
       sfx.cut();B.hp-=a*times;anim.hit=true;
       if(B.crit)B.log.push("会心の一撃！");if(B.weakHit)B.log.push("弱点を突いた！");
       if(F.drain&&hero.hp<hero.max){hero.hp++;B.log.push("吸の字で、心をひとつ吸いとった。");}
-      if(R.immortal&&B.hp>0){B.log.push(`${a*times}の傷。…が、${B.f.name}の傷はたちまち塞がった。不死なのだ。`);B.hp=B.max;}
+      if(R.immortal&&B.hp>0){B.log.push(`${a*times}の傷。…が、${B.f.name}の傷はたちまち塞がった。不死なのだ。`);B.hp=gearOn("armor","銀")?Math.max(1,B.hp+a*times-1):B.max;}
+      else if(gearOn("helm","輝"))B.psn=3;
+      if(B.f.thorn&&bText().includes("とげ")&&B.hp>0){hero.hp-=1;anim.hurt=true;B.log.push(`!${B.f.name}のとげが刺さった。心をひとつ失った。（「とげ」を削れば刺さらない）`);if(hero.hp<=0){hero.hp=0;renderBattle(anim);sfx.lose();setTimeout(loseBattle,700);return;}}
       else B.log.push(`${times>1?"すばやく二度":""}${(hero.eq||[]).some(Boolean)?weaponName(hero.eq.find(Boolean))+"で":""}斬った。${B.f.name}に${a*times}の傷。`);
       afterStrike(W,B.lines,B.log);
     }
@@ -3388,7 +3531,7 @@ function bAct(kind,p){
     B.log.push(`${old==="　"?"":`${Q(old)}を消し、`}${Q(p.ch)}と書いた。『${B.lines[p.li].join("")}』`);
   }else if(kind==="flee"){
     if(!B.mob)return;
-    if(Math.random()<.7){sfx.warpOut();B.log.push("うまく逃げきった。");const{r,c}=B;B=null;const o=touch(r,c);if(o)o.stun=3;buildWorld();say("逃げきった。");renderWorld();return;}
+    if(Math.random()<.7){sfx.warpOut();B.log.push("うまく逃げきった。");const{r,c}=B,sea=B.sea;B=null;const o=sea?null:touch(r,c);if(o)o.stun=3;buildWorld();say("逃げきった。");renderWorld();return;}
     B.log.push("逃げられない！");
   }else if(kind==="self"){
     B.self=B.self||[];B.self[p.i]=p.ch;if(p.src.from==="bag")hero.bag.splice(p.src.i,1);else S.hand=null;sfx.write();
@@ -3404,6 +3547,8 @@ function bAct(kind,p){
 function foeTurn(){
   if(!B)return;
   const R=foeRules(bText()),f=B.f,F=selfFx();let anim={};
+  if(B.psn>0&&!R.poison){B.psn--;B.hp-=1;B.log.push(`${f.name}に毒がまわる。1の傷。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}}
+  if(B.hpsn>0){B.hpsn--;hero.hp-=1;B.log.push("!毒針の毒がまわる。心をひとつ失った。");if(hero.hp<=0){hero.hp=0;renderBattle({hurt:true});sfx.lose();setTimeout(loseBattle,700);return;}}
   if(R.poison){B.hp-=1;B.log.push(`${f.name}は毒にむしばまれた。1の傷。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}}
   if(F.heal&&hero.hp<hero.max){hero.hp++;B.log.push("癒の字が、心をひとつ戻した。");}
   if(R.sleep){B.log.push(`${f.name}は眠っている。`);B.busy=false;renderBattle();return;}
@@ -3413,13 +3558,14 @@ function foeTurn(){
   if(R.confused&&Math.random()<.5){const d=Math.max(1,R.dmg);B.hp-=d;B.log.push(`${f.name}は混乱して、自分を打った。${d}の傷。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}B.busy=false;renderBattle({hit:true});return;}
   const edible=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c));
   if(R.eat&&edible.length){const[ch,i]=edible[Math.random()*edible.length|0];hero.bag.splice(i,1);B.log.push(`!${f.name}が字袋の${Q(ch)}を喰った。`);}
-  if(R.steal){const can=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c)&&!isWeapon(c));
+  if(R.steal&&!gearOn("helm","鉛")){const can=hero.bag.map((c,i)=>[c,i]).filter(([c])=>!LIGHTS.has(c)&&!isWeapon(c));
     if(can.length&&Math.random()<.4){const[ch,i]=can[Math.random()*can.length|0];hero.bag.splice(i,1);B.stolen=B.stolen||[];B.stolen.push(ch);B.log.push(`!${f.name}が字袋の${Q(ch)}を盗んだ！　倒せば取り返せる。`);sfx.take();
       if(B.stolen.length>=2&&Math.random()<.45){B.log.push(`!${f.name}は盗んだ字をくわえて、逃げていった……。`);B.busy=true;renderBattle(anim);setTimeout(foeFled,1100);return;}}}
   if(R.call&&B.tn%3===1&&(B.allies||0)<3){B.allies=(B.allies||0)+1;B.hp+=2;B.max+=2;B.log.push(`!仲間の${f.name}が集まってきた！（${B.allies+1}匹）　「群」を削れば、もう呼べない。`);sfx.foe&&sfx.foe();}
   if(R.rewrite&&B.tn%2===0){
     const selfI=(B.self||[]).findIndex(Boolean);
-    if(selfI>=0){const old=B.self[selfI];B.self[selfI]=null;B.log.push(`!${f.name}が、我の文の${Q(old)}を書き消した！`);}
+    if(selfI>=0&&gearOn("helm","紫")){B.log.push(`${f.name}が我の文を消そうとしたが、兜が守った。`);}
+    else if(selfI>=0){const old=B.self[selfI];B.self[selfI]=null;B.log.push(`!${f.name}が、我の文の${Q(old)}を書き消した！`);}
     else{let done=false;
       for(const l of B.lines){for(let i=1;i<l.length&&!done;i++){if("弱冷柔鈍眠縛盲遅凍乱脆封".includes(l[i])){const old=l[i];l[i]=pick(Math.random,["強","鋭","速"]);B.log.push(`!${f.name}が、自分の文の${Q(old)}を${Q(l[i])}に書きかえた！`);done=true;}}if(done)break;}
       if(!done)for(const l of B.lines){const i=l.indexOf("　",1);if(i>0){l[i]=pick(Math.random,["強","鋭","硬"]);B.log.push(`!${f.name}が、自分の文に${Q(l[i])}と書きこんだ！`);done=true;break;}}}
@@ -3431,6 +3577,8 @@ function foeTurn(){
     if(R.blind&&Math.random()<.5){B.log.push(`${f.name}の${f.weapon}は、目がくらんで空を切った。`);continue;}
     if(dm>0){hero.hp-=dm;sfx.hurt();anim.hurt=true;B.log.push(`!${f.name}の${f.weapon}が我を打った。心を${dm}つ失った。${R.fast&&k===0?"速い！":""}`);
       if(R.suck&&B.hp<B.max){B.hp++;B.log.push(`!${f.name}は血を吸って、傷をひとつ癒やした。`);}
+      if(f.sting&&bText().includes("毒針")&&!gearOn("armor","輝")&&!(B.hpsn>0)){B.hpsn=3;B.log.push("!毒針の毒が体にまわった。しばらく心が減っていく。");}
+      {const rf=gearReflect(dm);if(rf){B.hp-=rf;B.log.push(`鎧が${rf}の傷をはね返した。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}}}
       if(F.reflect){B.hp-=1;B.log.push(`返の字が、1の傷をはね返した。`);if(B.hp<=0){B.busy=true;B.log.push(`${f.name}を討った。`);renderBattle({dead:true});sfx.win();setTimeout(winBattle,1100);return;}}}
     else{sfx.bump();B.log.push(`${f.name}の${f.weapon}は、我にまるで効かない。`);}
     if(hero.hp<=0)break;
@@ -3465,7 +3613,7 @@ function raidDone(){
   });
 }
 function foeFled(){
-  if(!B)return;const{r,c,f}=B;B=null;setCell(r,c,null);buildWorld();say(`${Q(f.name)}に逃げられた。盗まれた字は戻らなかった……。`,"bad");saveGame();renderWorld();
+  if(!B)return;const{r,c,f}=B,sea=B.sea;B=null;if(!sea)setCell(r,c,null);buildWorld();say(`${Q(f.name)}に逃げられた。盗まれた字は戻らなかった……。`,"bad");saveGame();renderWorld();
 }
 function winBattle(){
   if(B&&!B.arena&&!B.splitDone&&B.f&&MOB_SET.has(B.f.glyph)&&foeRules(bText()).split){
@@ -3473,8 +3621,8 @@ function winBattle(){
   const STOLEN=B&&B.stolen?B.stolen.slice():[],ALLIES=B&&B.allies||0;
   if(S&&B&&B.f){S.flags.kills=S.flags.kills||{};const g=B.f.glyph||B.f.name;S.flags.kills[g]=(S.flags.kills[g]||0)+1;setTimeout(checkQuests,600);}
   if(S&&B&&!B.arena)S.flags.g_bwin=(S.flags.g_bwin||0)+1;
-  const{r,c,f}=B;const wasRaid=!!(at(r,c)||{}).raid;B=null;
-  setCell(r,c,null);
+  const{r,c,f}=B,wasSea=B.sea;const wasRaid=!wasSea&&!!(at(r,c)||{}).raid;B=null;
+  if(!wasSea)setCell(r,c,null);
   if(wasRaid&&S.flags.raid==="on"){S.flags.raidLeft=(S.flags.raidLeft||1)-1;}
   if(f.final){S.flags.cleared=true;saveGame();return ending(false);}
   if(f.trueFinal){S.flags.trueEnd=true;hero.max+=2;hero.hp=hero.max;saveGame();return ending(true);}
@@ -3494,7 +3642,8 @@ function winBattle(){
   if(WDROP[f.glyph]&&!S.flags["w_"+f.glyph]){S.flags["w_"+f.glyph]=true;const w=WDROP[f.glyph];const where=addWeapon(w);msg+=` 武器${Q(w)}を手に入れた（${where}）。`;}
   if(STOLEN.length){hero.bag.push(...STOLEN);msg+=` 盗まれた${STOLEN.map(Q).join("")}を取り返した。`;}
   if(f.exp){
-    const z=1+Math.floor(Math.random()*3)+Math.floor((D().tier||0)/2)+(f.zeni||0)+ALLIES*2;hero.zeni+=z;hero.exp+=f.exp+ALLIES;msg+=` 経験${f.exp+ALLIES}、銭${z}枚。`;
+    const z=Math.ceil((1+Math.floor(Math.random()*3)+Math.floor((D().tier||0)/2)+(f.zeni||0)+ALLIES*2)*(gearOn("helm","金")?1.5:1));
+    if(f.pearl&&Math.random()<.25){addMat("珠");msg+=` ${Q("真珠")}を手に入れた！（兜・鎧の素材）`;}hero.zeni+=z;hero.exp+=f.exp+ALLIES;msg+=` 経験${f.exp+ALLIES}、銭${z}枚。`;
     if(f.loot&&Math.random()<(f.dropRate||.35)){hero.bag.push(f.loot);msg+=` ${Q(f.loot)}の字を落とした。${f.rare?"（珍しい敵だ！）":""}`;}
     if(Math.random()<.18){hero.bag.push("薬");msg+=` ${Q("薬")}を落とした。`;}
     else if(Math.random()<.25&&(hero.eq||[]).includes("弓")){const n=2+Math.floor(Math.random()*3);hero.arrows+=n;msg+=` 矢を${n}本拾った。`;}
@@ -3602,6 +3751,7 @@ function title(){
 }
 
 document.addEventListener("keydown",e=>{
+  if(e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"))return;
   const k=e.key.toLowerCase();
   if(DLG){if(!e.repeat&&[" ","enter","j","k","arrowdown"].includes(k)){e.preventDefault();advance();}else if(e.repeat)e.preventDefault();return;}
   if(e.repeat&&NEEDFRESH){e.preventDefault();return;}
